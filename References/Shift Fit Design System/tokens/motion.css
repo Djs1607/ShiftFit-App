@@ -1,0 +1,22 @@
+:root{
+  --dur-instant:80ms; /* @kind other */
+  --dur-fast:140ms; /* @kind other */
+  --dur-base:220ms; /* @kind other */
+  --dur-slow:320ms; /* @kind other */
+  --dur-sheet:420ms; /* @kind other */
+  --dur-meter:900ms; /* @kind other */   /* metric/ring fill on screen entry */
+  --dur-pulse:2400ms; /* @kind other */  /* ambient breathing loop */
+
+  --ease-standard:cubic-bezier(.2,0,0,1); /* @kind other */
+  --ease-out:cubic-bezier(.16,1,.3,1); /* @kind other */
+  --ease-in:cubic-bezier(.6,0,1,1); /* @kind other */
+  --ease-mechanical:cubic-bezier(.5,0,.2,1); /* @kind other */ /* instrument needle: no overshoot */
+
+  --transition-control:background-color var(--dur-fast) var(--ease-standard),border-color var(--dur-fast) var(--ease-standard),color var(--dur-fast) var(--ease-standard),transform var(--dur-fast) var(--ease-standard); /* @kind other */
+  --press-scale:.97; /* @kind other */
+}
+@keyframes sf-meter-fill{from{stroke-dashoffset:var(--sf-dash-empty,1000)}}
+@keyframes sf-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes sf-breathe{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes sf-sweep{from{transform:translateX(-100%)}to{transform:translateX(200%)}}
+@media (prefers-reduced-motion:reduce){:root{--dur-fast:1ms; /* @kind other */ --dur-base:1ms; /* @kind other */ --dur-slow:1ms; /* @kind other */ --dur-sheet:1ms; /* @kind other */ --dur-meter:1ms /* @kind other */}}

@@ -1,0 +1,31 @@
+:root{
+  --space-0:0px;
+  --space-1:2px;
+  --space-2:4px;
+  --space-3:8px;
+  --space-4:12px;
+  --space-5:16px;
+  --space-6:20px;
+  --space-7:24px;
+  --space-8:32px;
+  --space-9:40px;
+  --space-10:48px;
+  --space-11:64px;
+  --space-12:80px;
+
+  --gutter-screen:20px;      /* mobile screen side padding */
+  --gutter-card:16px;        /* inside a card */
+  --gutter-card-lg:20px;
+  --stack-tight:8px;
+  --stack-default:12px;
+  --stack-section:24px;
+  --stack-block:32px;
+
+  --tap-min:44px;            /* never smaller */
+  --control-h-sm:32px;
+  --control-h-md:40px;
+  --control-h-lg:48px;
+  --nav-h:56px;
+  --tabbar-h:64px;
+  --max-content:1200px; /* @kind spacing */
+}

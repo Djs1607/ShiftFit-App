@@ -1,0 +1,25 @@
+<!-- @dsCard group="Components" viewport="700x320" name="Feedback — toast, dialog, tooltip, empty" subtitle="Transient, blocking and zero-data states" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>html,body{margin:0;background:var(--bg-base)}#root{padding:20px}.row{display:flex;flex-wrap:wrap;align-items:center;gap:12px}.col{display:flex;flex-direction:column;gap:12px}.lbl{font:var(--text-label);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-tertiary)}</style></head>
+<body><div id="root"></div>
+<script type="text/babel">
+const {Toast,Dialog,Tooltip,EmptyState,Button,Icon} = window.ShiftFitDesignSystem_f921d2;
+
+function Demo(){return <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,alignItems:'start'}}>
+ <div className="col">
+  <Toast tone="success" title="Set logged" message="82.5 kg × 8. Two sets to go." onClose={()=>{}}/>
+  <Toast tone="warning" title="Third night in a row" message="Readiness is trending down."/>
+  <div className="row"><Tooltip label="Rolling 7-day load ÷ 28-day load"><span className="row" style={{gap:6,color:'var(--text-secondary)'}}>Acute:chronic <Icon name="info" size="sm"/></span></Tooltip></div>
+  <EmptyState icon="moon" title="No sleep data yet" message="Log a sleep window after your next shift." action={<Button variant="secondary" size="sm" icon="plus">Log sleep</Button>} style={{padding:'16px 8px'}}/>
+ </div>
+ <div style={{position:'relative',height:280,borderRadius:'var(--radius-lg)',overflow:'hidden',border:'1px solid var(--border-subtle)',background:'var(--surface-inset)'}}>
+  <Dialog title="End session?" description="You have two sets left in this block." onClose={()=>{}}
+   actions={<><Button variant="secondary" fullWidth>Keep going</Button><Button fullWidth>End</Button></>}/>
+ </div>
+</div>}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo/>);
+</script></body></html>

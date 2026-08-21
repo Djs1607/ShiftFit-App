@@ -1,0 +1,100 @@
+:root{
+  /* ---- Base ramp: near-black steel neutrals ---- */
+  --sf-ink-950:#090D12;
+  --sf-ink-900:#0D1117;
+  --sf-ink-850:#12171F;
+  --sf-ink-800:#161B23;
+  --sf-ink-750:#1D242E;
+  --sf-ink-700:#252D39;
+  --sf-ink-650:#2D3743;
+  --sf-ink-600:#3C4854;
+  --sf-ink-500:#4A5563;
+  --sf-ink-400:#6B7686;
+  --sf-ink-300:#98A2B0;
+  --sf-ink-200:#C3CAD4;
+  --sf-ink-100:#E8EDF3;
+  --sf-ink-000:#FFFFFF;
+
+  /* ---- Primary: steel blue ---- */
+  --sf-blue-700:#2E5169;
+  --sf-blue-600:#3D6785;
+  --sf-blue-500:#4A7A9E;
+  --sf-blue-400:#5A8CB1;
+  --sf-blue-300:#7EA8C6;
+  --sf-blue-100:#C6DAE8;
+
+  /* ---- Accent: amber (effort / progress / the only warm note) ---- */
+  --sf-amber-700:#A9702F;
+  --sf-amber-600:#C68D45;
+  --sf-amber-500:#E0A458;
+  --sf-amber-400:#EAB471;
+  --sf-amber-300:#F2CB99;
+
+  /* ---- Semantic hues ---- */
+  --sf-green-500:#5E9E7E;
+  --sf-green-400:#74B694;
+  --sf-red-500:#C4614F;
+  --sf-red-400:#D67C69;
+
+  /* ---- Fatigue scale: 1 fresh → 5 critical ---- */
+  --sf-fatigue-1:#5E9E7E;
+  --sf-fatigue-2:#8FA96C;
+  --sf-fatigue-3:#E0A458;
+  --sf-fatigue-4:#D07E4A;
+  --sf-fatigue-5:#C4614F;
+
+  /* ---- Shift phase (circadian ribbon) ---- */
+  --sf-shift-day:#5A8CB1;
+  --sf-shift-swing:#E0A458;
+  --sf-shift-night:#2E5169;
+  --sf-shift-off:#3C4854;
+
+  /* ================= Semantic aliases ================= */
+  --bg-base:var(--sf-ink-900);
+  --bg-sunken:var(--sf-ink-950);
+  --bg-scrim:rgba(9,13,18,.72);
+
+  --surface-card:var(--sf-ink-800);
+  --surface-raised:var(--sf-ink-750);
+  --surface-overlay:var(--sf-ink-700);
+  --surface-inset:var(--sf-ink-850);
+  --surface-hover:rgba(255,255,255,.04);
+  --surface-press:rgba(255,255,255,.07);
+  --surface-selected:rgba(74,122,158,.14);
+
+  --border-subtle:rgba(255,255,255,.06);
+  --border-default:var(--sf-ink-650);
+  --border-strong:var(--sf-ink-600);
+  --border-focus:var(--sf-blue-400);
+
+  --text-primary:var(--sf-ink-100);
+  --text-body:var(--sf-ink-200);
+  --text-secondary:var(--sf-ink-300);
+  --text-tertiary:var(--sf-ink-400);
+  --text-disabled:var(--sf-ink-500);
+  --text-on-primary:#F2F7FB;
+  --text-on-accent:#241703;
+
+  --action-primary:var(--sf-blue-500);
+  --action-primary-hover:var(--sf-blue-400);
+  --action-primary-press:var(--sf-blue-600);
+  --action-primary-quiet:rgba(74,122,158,.16);
+
+  --action-accent:var(--sf-amber-500);
+  --action-accent-hover:var(--sf-amber-400);
+  --action-accent-press:var(--sf-amber-600);
+  --action-accent-quiet:rgba(224,164,88,.14);
+
+  --feedback-success:var(--sf-green-500);
+  --feedback-success-quiet:rgba(94,158,126,.14);
+  --feedback-warning:var(--sf-amber-500);
+  --feedback-warning-quiet:rgba(224,164,88,.14);
+  --feedback-danger:var(--sf-red-500);
+  --feedback-danger-quiet:rgba(196,97,79,.14);
+  --feedback-info:var(--sf-blue-500);
+  --feedback-info-quiet:rgba(74,122,158,.14);
+
+  --data-track:rgba(255,255,255,.08);
+  --data-grid:rgba(255,255,255,.05);
+  --focus-ring:0 0 0 2px var(--bg-base),0 0 0 4px var(--sf-blue-400);
+}

@@ -1,0 +1,13 @@
+:root{
+  /* Dark UI: elevation is mostly surface-value + hairline. Shadows stay deep and
+     low-opacity; never soft grey blooms. */
+  --shadow-none:none;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.40);
+  --shadow-md:0 4px 12px rgba(0,0,0,.45);
+  --shadow-lg:0 12px 32px rgba(0,0,0,.55);
+  --shadow-sheet:0 -8px 32px rgba(0,0,0,.60);
+  --inset-hairline:inset 0 1px 0 rgba(255,255,255,.05);
+  --glow-primary:0 0 0 1px rgba(74,122,158,.45),0 0 20px rgba(74,122,158,.20);
+  --glow-accent:0 0 0 1px rgba(224,164,88,.45),0 0 24px rgba(224,164,88,.22);
+  --blur-sheet:blur(18px) saturate(120%); /* @kind other */
+}

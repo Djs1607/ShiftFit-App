@@ -1,0 +1,22 @@
+<!-- @dsCard group="Motion" viewport="700x210" name="Signature motions" subtitle="Needle fill, rise-in, breathing live dot, scan sweep on loading." -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>html,body{margin:0;background:var(--bg-base);color:var(--text-body)}body{padding:20px}
+.lbl{font:var(--fw-semibold) var(--fs-micro)/1 var(--font-body);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-tertiary)}
+.mono{font-family:var(--font-mono);font-feature-settings:var(--font-numeric-feature)}
+.row{display:flex;gap:12px}.col{display:flex;flex-direction:column;gap:10px}
+.wm{font-family:var(--font-display);font-weight:700;letter-spacing:-0.03em;color:var(--text-primary)}
+.wm i{font-style:normal;color:var(--sf-amber-500)}
+.ring{width:74px;height:74px;transform:rotate(-135deg)}
+.ring circle{fill:none;stroke-width:9;stroke-linecap:round}
+.ring .t{stroke:var(--data-track)}
+.ring .v{stroke:var(--sf-amber-500);stroke-dasharray:155 400;animation:fill 3.2s var(--ease-mechanical) infinite}
+@keyframes fill{0%{stroke-dasharray:0 400}45%,100%{stroke-dasharray:155 400}}
+.rise{animation:sf-rise 2.4s var(--ease-out) infinite}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--sf-green-400);animation:sf-breathe var(--dur-pulse) ease-in-out infinite}
+.sweeper{position:relative;width:130px;height:34px;border-radius:8px;background:var(--surface-inset);overflow:hidden}
+.sweeper::after{content:'';position:absolute;inset:0;width:40%;background:linear-gradient(90deg,transparent,rgba(224,164,88,.22),transparent);animation:sf-sweep 1.6s linear infinite}</style></head><body><div class="row" style="gap:32px;align-items:center">
+<div class="col" style="gap:8px;align-items:center"><svg class="ring" viewBox="0 0 74 74"><circle class="t" cx="37" cy="37" r="30"/><circle class="v" cx="37" cy="37" r="30"/></svg><span class="lbl">Needle fill 900ms</span></div>
+<div class="col" style="gap:8px;align-items:center"><div class="rise" style="padding:10px 14px;background:var(--surface-overlay);border:1px solid var(--border-default);border-radius:10px;font:500 13px/1 var(--font-body);color:var(--text-primary)">Set logged</div><span class="lbl">Rise-in 220ms</span></div>
+<div class="col" style="gap:8px;align-items:center"><div style="display:flex;align-items:center;gap:8px"><span class="dot"></span><span class="mono" style="font-size:20px;color:var(--text-primary)">00:42</span></div><span class="lbl">Breathe 2.4s</span></div>
+<div class="col" style="gap:8px;align-items:center"><div class="sweeper"></div><span class="lbl">Scan sweep</span></div>
+</div></body></html>

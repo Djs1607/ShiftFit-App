@@ -1,0 +1,24 @@
+<!-- @dsCard group="Components" viewport="700x330" name="Navigation — bars, segments, rows" subtitle="Top bar, bottom tabs, segmented switcher, list rows" -->
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>html,body{margin:0;background:var(--bg-base)}#root{padding:0}.row{display:flex;flex-wrap:wrap;align-items:center;gap:12px}.col{display:flex;flex-direction:column;gap:12px}.lbl{font:var(--text-label);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--text-tertiary)}</style></head>
+<body><div id="root"></div>
+<script type="text/babel">
+const {TopBar,TabBar,SegmentedControl,ListRow,Icon,Badge} = window.ShiftFitDesignSystem_f921d2;
+
+function Demo(){const [t,setT]=React.useState('today'),[r,setR]=React.useState('Week');
+return <div className="col" style={{gap:0}}>
+ <TopBar eyebrow="Night 3 of 4" title="Today" actions={<><Icon name="bell" size="md" style={{color:'var(--text-secondary)'}}/></>}/>
+ <div style={{padding:'16px 20px'}}><SegmentedControl options={['Week','Month','Cycle']} value={r} onChange={setR}/></div>
+ <div>
+  <ListRow title="Bench press" subtitle="Chest · Barbell" meta="4 × 8" onClick={()=>{}}/>
+  <ListRow title="Romanian deadlift" subtitle="Posterior · Barbell" meta="3 × 10" onClick={()=>{}}/>
+  <ListRow title="Face pull" subtitle="Rear delt · Cable" trailing={<Badge tone="success">Done</Badge>} chevron={false}/>
+ </div>
+ <TabBar active={t} onChange={setT} items={[{id:'today',label:'Today',icon:'activity'},{id:'train',label:'Train',icon:'dumbbell'},{id:'recover',label:'Recover',icon:'moon'},{id:'you',label:'You',icon:'user'}]}/>
+</div>}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo/>);
+</script></body></html>

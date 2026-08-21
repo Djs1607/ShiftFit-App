@@ -1,0 +1,6 @@
+/* Shift Fit webfonts.
+   Space Grotesk (headings), Inter (body/UI), JetBrains Mono (metrics/tabular).
+   All three are Google Fonts, served from the Google CDN — no local binaries were
+   provided. Swap these @import lines for self-hosted @font-face blocks if the
+   brand ships licensed files. */
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap");
