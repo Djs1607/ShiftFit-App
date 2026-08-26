@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Dumbbell } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { buildDayPlans, dateKey, parseDateKey, pad2 } from '../lib/schedule';
 import { IntensityDot } from '../components/Fatigue';
+import { Card, IconButton, MetricTile, SegmentedControl, SparkBars } from '../components/ds';
 
 type Range = '1W' | '1M' | '6M' | '1Y' | 'All';
 const RANGES: Range[] = ['1W', '1M', '6M', '1Y', 'All'];
@@ -41,6 +42,19 @@ export default function Progress() {
     return { count, mins, hours: Math.round((mins / 60) * 10) / 10, vol };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [completed, range]);
+
+  // last 7 days of lifted volume — axis-free trend, today highlighted
+  const weekBars = useMemo(() => {
+    const days: { key: string; vol: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 86400000);
+      const key = dateKey(d);
+      const vol = completed.filter((w) => w.datetime.slice(0, 10) === key).reduce((t, w) => t + volumeOf(w), 0);
+      days.push({ key, vol });
+    }
+    return days;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [completed]);
 
   // days the user rested exactly as prescribed (a win for this audience)
   const restWins = useMemo(() => {
@@ -84,58 +98,44 @@ export default function Progress() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-3xl font-display font-semibold uppercase tracking-[0.06em]">Progress</h1>
+      <h1 className="font-display text-[26px] font-semibold leading-tight tracking-[-0.02em] text-fg-primary">Progress</h1>
 
       {/* stats card */}
-      <section className="rounded-2xl bg-ink-900 border border-ink-800 p-5">
-        <div className="flex rounded-xl bg-ink-800/60 p-1 mb-5">
-          {RANGES.map((r) => (
-            <button key={r} onClick={() => setRange(r)}
-              className={`flex-1 rounded-lg py-1.5 text-xs font-bold transition-colors ${
-                range === r ? 'bg-shock-400 text-ink-950' : 'text-ink-400'
-              }`}>
-              {r}
-            </button>
-          ))}
+      <Card tone="default" padding="lg">
+        <SegmentedControl options={RANGES} value={range} onChange={setRange} className="mb-5" />
+        <div className="grid grid-cols-3 text-center divide-x divide-line-subtle">
+          <MetricTile label="Workouts" value={stats.count} size="sm" className="items-center" />
+          <MetricTile label={stats.hours < 1 ? 'Minutes' : 'Hours'} value={stats.hours < 1 ? stats.mins : stats.hours} size="sm" className="items-center" />
+          <MetricTile label="Kg lifted" value={fmtVolume(stats.vol)} size="sm" className="items-center" />
         </div>
-        <div className="grid grid-cols-3 text-center divide-x divide-ink-800">
-          <div>
-            <p className="readout text-4xl text-shock-300">{stats.count}</p>
-            <p className="text-xs text-ink-500 mt-1">Workouts logged</p>
-          </div>
-          <div>
-            <p className="readout text-4xl text-shock-300">
-              {stats.hours < 1 ? stats.mins : stats.hours}
-            </p>
-            <p className="text-xs text-ink-500 mt-1">{stats.hours < 1 ? 'Minutes' : 'Hours'} training</p>
-          </div>
-          <div>
-            <p className="readout text-4xl text-shock-300">{fmtVolume(stats.vol)}</p>
-            <p className="text-xs text-ink-500 mt-1">Total kg lifted</p>
-          </div>
-        </div>
-      </section>
+      </Card>
+
+      {/* weekly volume trend */}
+      <Card tone="default" padding="lg">
+        <h2 className="text-[15px] font-semibold text-fg-primary mb-3">Last 7 days</h2>
+        <SparkBars
+          data={weekBars.map((d) => d.vol)}
+          labels={weekBars.map((d) => parseDateKey(d.key).toLocaleDateString(undefined, { weekday: 'narrow' }))}
+          highlightLast
+        />
+      </Card>
 
       {/* calendar */}
-      <section className="rounded-2xl bg-ink-900 border border-ink-800 p-5">
+      <Card tone="default" padding="lg">
         <div className="flex items-center justify-between mb-4">
-          <button onClick={() => shiftMonth(-1)} className="p-2 rounded-lg text-ink-400 hover:bg-ink-800" aria-label="Previous month">
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <p className="font-semibold">{monthLabel}</p>
+          <IconButton icon={ChevronLeft} label="Previous month" onClick={() => shiftMonth(-1)} />
+          <p className="text-[15px] font-semibold text-fg-primary">{monthLabel}</p>
           <div className="flex items-center gap-1">
             {!isCurrentMonth && (
               <button onClick={() => { setCalYear(now.getFullYear()); setCalMonth(now.getMonth()); }}
-                className="text-xs font-semibold text-shock-300 px-2 py-1">Today</button>
+                className="text-[12px] font-semibold text-coral-300 px-2 py-1">Today</button>
             )}
-            <button onClick={() => shiftMonth(1)} className="p-2 rounded-lg text-ink-400 hover:bg-ink-800" aria-label="Next month">
-              <ChevronRight className="h-5 w-5" />
-            </button>
+            <IconButton icon={ChevronRight} label="Next month" onClick={() => shiftMonth(1)} />
           </div>
         </div>
         <div className="grid grid-cols-7 gap-y-1 text-center">
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-            <span key={i} className="text-[11px] font-semibold text-ink-600 py-1">{d}</span>
+            <span key={i} className="text-[11px] font-semibold text-fg-disabled py-1">{d}</span>
           ))}
           {Array.from({ length: firstWeekday }, (_, i) => <span key={'b' + i} />)}
           {Array.from({ length: daysInMonth }, (_, i) => {
@@ -146,47 +146,47 @@ export default function Progress() {
             const isToday = key === todayKey;
             return (
               <span key={day} className="flex flex-col items-center py-1">
-                <span className={`h-8 w-8 flex items-center justify-center rounded-full text-sm font-medium ${
-                  isToday ? 'ring-1 ring-shock-400/60 text-shock-300' : trained ? 'text-ink-100' : 'text-ink-500'
+                <span className={`h-8 w-8 flex items-center justify-center rounded-full text-[14px] font-medium ${
+                  isToday ? 'ring-1 ring-coral-400/60 text-coral-300' : trained ? 'text-fg-primary' : 'text-fg-tertiary'
                 }`}>
                   {day}
                 </span>
                 <span className={`mt-0.5 h-1.5 w-1.5 rounded-full ${
-                  trained ? 'bg-shock-400' : rested ? 'bg-night-400' : 'bg-transparent'
+                  trained ? 'bg-action-accent' : rested ? 'bg-coral-400' : 'bg-transparent'
                 }`} />
               </span>
             );
           })}
         </div>
         <div className="flex items-center gap-4 mt-3 justify-center">
-          <span className="flex items-center gap-1.5 text-[11px] text-ink-500">
-            <span className="h-1.5 w-1.5 rounded-full bg-shock-400" /> Trained
+          <span className="flex items-center gap-1.5 text-[11px] text-fg-tertiary">
+            <span className="h-1.5 w-1.5 rounded-full bg-action-accent" /> Trained
           </span>
-          <span className="flex items-center gap-1.5 text-[11px] text-ink-500">
-            <span className="h-1.5 w-1.5 rounded-full bg-night-400" /> Rested as prescribed
+          <span className="flex items-center gap-1.5 text-[11px] text-fg-tertiary">
+            <span className="h-1.5 w-1.5 rounded-full bg-coral-400" /> Rested as prescribed
           </span>
         </div>
-      </section>
+      </Card>
 
       {/* recent sessions */}
-      <section className="rounded-2xl bg-ink-900 border border-ink-800 p-5">
-        <h2 className="font-semibold mb-3">Recent sessions</h2>
+      <Card tone="default" padding="lg">
+        <h2 className="text-[15px] font-semibold text-fg-primary mb-3">Recent sessions</h2>
         {completed.length === 0 ? (
-          <p className="text-sm text-ink-500 flex items-center gap-2">
+          <p className="text-[14px] text-fg-tertiary flex items-center gap-2">
             <Dumbbell className="h-4 w-4" /> Nothing logged yet — start a workout from the Workouts tab.
           </p>
         ) : (
-          <ul className="divide-y divide-ink-800">
+          <ul className="divide-y divide-line-subtle">
             {completed.slice(0, 8).map((w) => {
               const d = parseDateKey(w.datetime.slice(0, 10));
               const vol = volumeOf(w);
               return (
                 <li key={w.id} className="py-3 flex items-center gap-3">
                   <div className="flex-1">
-                    <p className="text-sm font-semibold flex items-center gap-2">
+                    <p className="text-[14px] font-semibold text-fg-primary flex items-center gap-2">
                       {w.type} <IntensityDot intensity={w.intensity} />
                     </p>
-                    <p className="text-xs text-ink-500 mt-0.5">
+                    <p className="text-[13px] text-fg-tertiary mt-0.5">
                       {d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
                       {' · '}{w.durationMin} min
                       {vol > 0 && ` · ${fmtVolume(vol)} kg`}
@@ -198,7 +198,7 @@ export default function Progress() {
             })}
           </ul>
         )}
-      </section>
+      </Card>
     </div>
   );
 }

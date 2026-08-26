@@ -6,6 +6,7 @@ import type { ShiftDay, ShiftPattern } from '../lib/types';
 import { dateKey, parseHM } from '../lib/schedule';
 import TimePicker from '../components/TimePicker';
 import { PRESETS } from '../lib/presets';
+import { Badge, Button, ConfirmSheet, IconButton, Input, Select } from '../components/ds';
 
 function blankDays(n: number): ShiftDay[] {
   return Array.from({ length: n }, (_, i) => ({
@@ -17,6 +18,7 @@ export default function Patterns() {
   const { user, userPatterns, activePattern, dispatch } = useStore();
   const [editing, setEditing] = useState<ShiftPattern | null>(null);
   const [building, setBuilding] = useState(false);
+  const [toDelete, setToDelete] = useState<ShiftPattern | null>(null);
 
   if (!user) return null;
 
@@ -34,65 +36,71 @@ export default function Patterns() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-display font-semibold uppercase tracking-[0.06em]">Shift patterns</h1>
-        <button
-          onClick={() => setBuilding(true)}
-          className="flex items-center gap-1.5 rounded-xl bg-shock-400 text-ink-950 font-bold px-4 py-2.5 text-sm active:scale-[0.97]"
-        >
-          <Plus className="h-4 w-4" strokeWidth={2.5} /> New
-        </button>
+        <h1 className="font-display text-[26px] font-semibold leading-tight tracking-[-0.02em] text-fg-primary">Shift patterns</h1>
+        <Button variant="primary" size="sm" icon={Plus} onClick={() => setBuilding(true)}>New</Button>
       </div>
 
       {userPatterns.length === 0 && (
-        <p className="text-sm text-ink-500">No patterns yet. Create one, or start from a preset.</p>
+        <p className="text-[14px] text-fg-tertiary">No patterns yet. Create one, or start from a preset.</p>
       )}
 
       <ul className="space-y-3">
         {userPatterns.map((p) => {
           const onDays = p.days.filter((d) => d.isOnShift).length;
           return (
-            <li key={p.id} className={`rounded-2xl border p-4 ${p.isActive ? 'bg-ink-900 border-shock-400/40' : 'bg-ink-900 border-ink-800'}`}>
+            <li key={p.id} className={`rounded-card border p-4 bg-surface-card ${p.isActive ? 'border-coral-400/40' : 'border-line-subtle'}`}>
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="font-semibold flex items-center gap-2">
+                  <p className="text-[15px] font-semibold text-fg-primary flex items-center gap-2">
                     {p.name}
-                    {p.isActive && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-shock-300 bg-shock-400/15 rounded-full px-2 py-0.5">Active</span>
-                    )}
+                    {p.isActive && <Badge tone="primary">Active</Badge>}
                   </p>
-                  <p className="text-xs text-ink-500 mt-1">
+                  <p className="text-[13px] text-fg-tertiary mt-1">
                     {p.cycleLengthDays}-day cycle · {onDays} shifts · starts {p.startDate}
                   </p>
-                  <p className="text-xs text-ink-500 mt-0.5">
+                  <p className="text-[13px] text-fg-tertiary mt-0.5 font-mono">
                     {p.days.filter((d) => d.isOnShift).map((d, i) => (
-                      <span key={i} className="mr-2">{d.startTime}–{d.endTime}{parseHM(d.endTime).h * 60 + parseHM(d.endTime).m <= parseHM(d.startTime).h * 60 + parseHM(d.startTime).m && <Moon className="inline h-3 w-3 ml-0.5 text-night-300" />}</span>
+                      <span key={i} className="mr-2">{d.startTime}–{d.endTime}{parseHM(d.endTime).h * 60 + parseHM(d.endTime).m <= parseHM(d.startTime).h * 60 + parseHM(d.startTime).m && <Moon className="inline h-3 w-3 ml-0.5 text-shift-night" />}</span>
                     ))}
                   </p>
                 </div>
                 <div className="flex gap-1 shrink-0">
-                  <button onClick={() => setEditing(p)} className="p-2 rounded-lg text-ink-400 hover:bg-ink-800" aria-label="Edit">
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => { if (confirm(`Delete "${p.name}"?`)) dispatch({ type: 'deletePattern', id: p.id, userId: user.id }); }}
-                    className="p-2 rounded-lg text-ink-400 hover:bg-ink-800 hover:text-cooked-400" aria-label="Delete"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <IconButton icon={Pencil} label="Edit" onClick={() => setEditing(p)} />
+                  <IconButton
+                    icon={Trash2}
+                    label="Delete"
+                    onClick={() => setToDelete(p)}
+                    className="hover:text-feedback-danger"
+                  />
                 </div>
               </div>
               {!p.isActive && (
-                <button
+                <Button
+                  variant="secondary"
+                  size="md"
+                  fullWidth
                   onClick={() => dispatch({ type: 'setActivePattern', id: p.id, userId: user.id })}
-                  className="mt-3 w-full rounded-xl border border-ink-700 py-2.5 text-sm font-semibold text-ink-300 active:bg-ink-800"
+                  className="mt-3"
                 >
                   Set as active
-                </button>
+                </Button>
               )}
             </li>
           );
         })}
       </ul>
+
+      <ConfirmSheet
+        open={!!toDelete}
+        title={`Delete "${toDelete?.name}"?`}
+        message="This can't be undone."
+        confirmLabel="Delete"
+        onCancel={() => setToDelete(null)}
+        onConfirm={() => {
+          if (toDelete) dispatch({ type: 'deletePattern', id: toDelete.id, userId: user.id });
+          setToDelete(null);
+        }}
+      />
     </div>
   );
 }
@@ -162,76 +170,65 @@ function Builder({
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-display font-semibold uppercase tracking-[0.06em]">{existing ? 'Edit pattern' : 'New pattern'}</h1>
-        <button onClick={onDone} className="p-2 rounded-lg text-ink-400 hover:bg-ink-800" aria-label="Close">
-          <X className="h-5 w-5" />
-        </button>
+        <h1 className="font-display text-[26px] font-semibold leading-tight tracking-[-0.02em] text-fg-primary">{existing ? 'Edit pattern' : 'New pattern'}</h1>
+        <IconButton icon={X} label="Close" onClick={onDone} />
       </div>
 
       {!existing && (
-        <div>
-          <label className="text-xs font-semibold text-ink-500 uppercase tracking-wider block mb-2">Start from a preset</label>
-          <select
-            value=""
-            onChange={(e) => {
-              const preset = PRESETS.find((p) => p.name === e.target.value);
-              if (preset) applyPreset(preset);
-            }}
-            className="w-full rounded-xl bg-ink-900 border border-ink-800 px-4 py-3 text-sm outline-none focus:border-shock-400/60 text-ink-300"
-          >
-            <option value="" disabled>Choose a common rotation…</option>
-            {PRESETS.map((p) => (
-              <option key={p.name} value={p.name}>{p.name}</option>
-            ))}
-          </select>
-        </div>
+        <Select
+          label="Start from a preset"
+          value=""
+          onChange={(e) => {
+            const preset = PRESETS.find((p) => p.name === e.target.value);
+            if (preset) applyPreset(preset);
+          }}
+          options={[{ value: '', label: 'Choose a common rotation…' }, ...PRESETS.map((p) => ({ value: p.name, label: p.name }))]}
+        />
       )}
 
       <div className="space-y-3">
-        <input
-          className="w-full rounded-xl bg-ink-900 border border-ink-800 px-4 py-3 text-base outline-none focus:border-shock-400/60 placeholder:text-ink-600"
+        <Input
           placeholder="Pattern name (e.g. 4on/4off nights)"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          size="lg"
         />
-        <div>
-          <label className="text-xs text-ink-500 block mb-1.5">Cycle day 1 starts on</label>
-          <input
-            type="date"
-            className="w-full rounded-xl bg-ink-900 border border-ink-800 px-4 py-3 text-base outline-none focus:border-shock-400/60 [color-scheme:dark]"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
-        </div>
+        <Input
+          type="date"
+          label="Cycle day 1 starts on"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          size="lg"
+        />
       </div>
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <p className="text-xs font-semibold text-ink-500 uppercase tracking-wider">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.06em] text-fg-tertiary">
             Rotation cycle — {days.length} days ({onCount} on)
           </p>
           <div className="flex gap-1.5">
-            <button onClick={removeDay} className="h-8 w-8 rounded-lg bg-ink-800 text-ink-300 font-bold active:bg-ink-700">−</button>
-            <button onClick={addDay} className="h-8 w-8 rounded-lg bg-ink-800 text-ink-300 font-bold active:bg-ink-700">+</button>
+            <button onClick={removeDay} className="h-8 w-8 rounded-control bg-surface-raised text-fg-body font-bold hover:bg-surface-press">−</button>
+            <button onClick={addDay} className="h-8 w-8 rounded-control bg-surface-raised text-fg-body font-bold hover:bg-surface-press">+</button>
           </div>
         </div>
 
         {/* repeating schedule generator */}
-        <div className="mb-3 flex items-center gap-2 rounded-xl bg-ink-800/50 border border-ink-800 px-3 py-2.5">
-          <span className="text-xs text-ink-400 shrink-0">Repeating:</span>
+        <div className="mb-3 flex items-center gap-2 rounded-card bg-surface-card border border-line-subtle px-3 py-2.5">
+          <span className="text-[13px] text-fg-secondary shrink-0">Repeating:</span>
           <input
             type="number" min={1} max={14} value={genOn}
             onChange={(e) => setGenOn(Number(e.target.value) || 1)}
-            className="w-12 rounded-lg bg-ink-800 border border-ink-700 px-2 py-1.5 text-center text-sm outline-none"
+            className="w-12 rounded-control bg-surface-inset border border-line-default px-2 py-1.5 text-center text-[13px] font-mono text-fg-primary outline-none"
           />
-          <span className="text-xs text-ink-400">on /</span>
+          <span className="text-[13px] text-fg-secondary">on /</span>
           <input
             type="number" min={0} max={14} value={genOff}
             onChange={(e) => setGenOff(Number(e.target.value) || 0)}
-            className="w-12 rounded-lg bg-ink-800 border border-ink-700 px-2 py-1.5 text-center text-sm outline-none"
+            className="w-12 rounded-control bg-surface-inset border border-line-default px-2 py-1.5 text-center text-[13px] font-mono text-fg-primary outline-none"
           />
-          <span className="text-xs text-ink-400">off</span>
-          <button onClick={generate} className="ml-auto rounded-lg bg-shock-400/15 text-shock-300 text-xs font-bold px-3 py-1.5 active:bg-shock-400/25">
+          <span className="text-[13px] text-fg-secondary">off</span>
+          <button onClick={generate} className="ml-auto rounded-control bg-action-primary-quiet text-coral-300 text-[12px] font-bold px-3 py-1.5 hover:bg-[rgba(255,106,69,.24)]">
             Build
           </button>
         </div>
@@ -241,14 +238,14 @@ function Builder({
             const overnight = d.isOnShift &&
               parseHM(d.endTime).h * 60 + parseHM(d.endTime).m <= parseHM(d.startTime).h * 60 + parseHM(d.startTime).m;
             return (
-              <li key={i} className={`rounded-2xl border p-3.5 ${d.isOnShift ? 'bg-ink-900 border-ink-700' : 'bg-ink-900/50 border-ink-800'}`}>
+              <li key={i} className={`rounded-card border p-3.5 ${d.isOnShift ? 'bg-surface-card border-line-default' : 'bg-surface-card/50 border-line-subtle'}`}>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-ink-300 flex items-center gap-2">
+                  <span className="text-[14px] font-semibold text-fg-body flex items-center gap-2">
                     Day {i + 1}
                     {d.isOnShift && onCount > 1 && (
                       <button
                         onClick={() => applyTimesToAll(i)}
-                        className="text-[10px] font-bold text-shock-300/80 uppercase tracking-wide active:text-shock-200"
+                        className="text-[10px] font-bold text-coral-300/80 uppercase tracking-wide hover:text-coral-200"
                       >
                         ⇢ times to all
                       </button>
@@ -256,8 +253,8 @@ function Builder({
                   </span>
                   <button
                     onClick={() => setDay(i, { isOnShift: !d.isOnShift })}
-                    className={`rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
-                      d.isOnShift ? 'bg-shock-400 text-ink-950' : 'bg-ink-800 text-ink-400'
+                    className={`rounded-pill px-4 py-1.5 text-[12px] font-bold transition-colors duration-fast ease-standard ${
+                      d.isOnShift ? 'bg-action-primary text-fg-onPrimary' : 'bg-surface-raised text-fg-tertiary'
                     }`}
                   >
                     {d.isOnShift ? 'On shift' : 'Off'}
@@ -267,11 +264,11 @@ function Builder({
                   <div className="mt-3">
                     <div className="flex items-center gap-2">
                       <TimePicker value={d.startTime} onChange={(v) => setDay(i, { startTime: v })} className="flex-1" />
-                      <span className="text-ink-500 text-sm">→</span>
+                      <span className="text-fg-tertiary text-[14px]">→</span>
                       <TimePicker value={d.endTime} onChange={(v) => setDay(i, { endTime: v })} className="flex-1" />
                     </div>
                     {overnight && (
-                      <p className="mt-2 flex items-center gap-1.5 text-xs text-night-300">
+                      <p className="mt-2 flex items-center gap-1.5 text-[13px] text-coral-300">
                         <Moon className="h-3.5 w-3.5" /> Crosses midnight — ends next day
                       </p>
                     )}
@@ -283,15 +280,11 @@ function Builder({
         </ul>
       </div>
 
-      {error && <p className="text-cooked-400 text-sm">{error}</p>}
+      {error && <p className="text-feedback-danger text-[13px]">{error}</p>}
 
-      <button
-        onClick={save}
-        className="w-full rounded-xl bg-shock-400 text-ink-950 font-bold py-3.5 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-      >
-        <Check className="h-5 w-5" strokeWidth={2.5} />
+      <Button variant="primary" size="lg" fullWidth icon={Check} onClick={save}>
         {existing ? 'Save changes' : 'Create pattern'}
-      </button>
+      </Button>
     </div>
   );
 }

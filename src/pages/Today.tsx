@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { Moon, Sun, ChevronRight, Play, BedDouble, Check, Pencil } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { uid } from '../lib/storage';
 import { buildDayPlans, fmtTime, dateKey, localISO } from '../lib/schedule';
 import { WORKOUT_LIBRARY } from '../lib/library';
-import { fatigueText, FatigueBar } from '../components/Fatigue';
 import TimePicker from '../components/TimePicker';
+import LoadMotif from '../components/LoadMotif';
+import { LOAD_LABEL, LOAD_RULE, LOAD_TEXT } from '../lib/load';
+import { Button, EmptyState, FatigueGauge, ShiftRibbon, type ShiftRibbonDay } from '../components/ds';
 import type { Tab } from '../App';
 import type { Recommendation, SleepQuality, Workout } from '../lib/types';
 
@@ -17,13 +19,13 @@ const START_PICKS: Record<Recommendation, string> = {
   hard: 'heavy-lifts',
 };
 const START_LABELS: Record<Recommendation, string> = {
-  rest: 'Too cooked? Just the 10-min reset',
-  light: 'Start now — light session',
-  moderate: 'Start now — moderate session',
-  hard: 'Start now — go hard',
+  rest: 'Do the 10-min reset',
+  light: 'Start light session',
+  moderate: 'Start moderate session',
+  hard: 'Start hard session',
 };
 
-// what the fatigue ring is telling you, in one line
+// what the fatigue gauge is telling you, in one line
 const FATIGUE_SUBTITLE: Record<Recommendation, string> = {
   rest: 'Recovery day',
   light: 'Take it easy today',
@@ -52,21 +54,8 @@ function greeting(now: Date): string {
   return 'Good night';
 }
 
-// horizontal fatigue readout — number + verdict lead, bar gives it scale at a glance
-function FatigueReadout({ score, subtitle }: { score: number; subtitle: string }) {
-  return (
-    <div>
-      <p className="flex items-baseline gap-1.5 flex-wrap">
-        <span className={`readout text-4xl ${fatigueText(score)}`}>{score}</span>
-        <span className="text-ink-600 font-display text-lg">/100</span>
-        <span className="text-ink-400 text-sm">— {subtitle}</span>
-      </p>
-      <div className="mt-3">
-        <FatigueBar score={score} />
-      </div>
-    </div>
-  );
-}
+// staggered entrance index -> CSS custom property consumed by .rise
+const rise = (i: number) => ({ '--rise-i': i }) as CSSProperties;
 
 export default function Today({ go, onStart }: { go: (t: Tab) => void; onStart: (id: string) => void }) {
   const { user, activePattern, userWorkouts, userSleepLogs, userOverrides, dispatch } = useStore();
@@ -91,14 +80,13 @@ export default function Today({ go, onStart }: { go: (t: Tab) => void; onStart: 
   if (!activePattern) {
     return (
       <div className="space-y-6">
-        <h1 className="font-display text-3xl leading-tight">
+        <h1 className="font-display text-[28px] font-semibold leading-tight tracking-[-0.02em] text-fg-primary">
           {greeting(now)}, {firstName}
         </h1>
         <EmptyState
           title="No shift pattern yet"
-          body="Define your rotation once — ShiftFit projects it onto the calendar and tells you when to push, go light, or rest."
-          cta="Build my rotation"
-          onCta={() => go('shifts')}
+          message="Define your rotation once. ShiftFit projects it onto the calendar and tells you when to push, go light, or rest."
+          action={<Button variant="primary" onClick={() => go('shifts')}>Build my rotation</Button>}
         />
       </div>
     );
@@ -118,6 +106,7 @@ export default function Today({ go, onStart }: { go: (t: Tab) => void; onStart: 
   const suggested = WORKOUT_LIBRARY.find((l) => l.id === START_PICKS[today.recommendation]) ?? WORKOUT_LIBRARY[0];
   const isRest = !nextWorkout && today.recommendation === 'rest' && doneToday.length === 0;
   const isDone = doneToday.length > 0;
+  const level = today.recommendation;
 
   const startSuggested = () => {
     const w: Workout = {
@@ -135,7 +124,7 @@ export default function Today({ go, onStart }: { go: (t: Tab) => void; onStart: 
     onStart(w.id);
   };
 
-  // resolve what today's session actually is, once, for the hero card + details below
+  // resolve what today's session actually is, once, for the panel + list below
   const w = nextWorkout;
   const lib = (w ? WORKOUT_LIBRARY.find((l) => l.id === w.libraryId) : suggested) ?? suggested;
   const sessionName = w ? (w.notes ?? w.type) : isRest ? 'Rest day' : lib.name;
@@ -144,30 +133,58 @@ export default function Today({ go, onStart }: { go: (t: Tab) => void; onStart: 
     : (lib.plan ?? []).map((p) => ({ name: p.name, sets: p.sets, reps: p.reps }));
   const mins = w ? w.durationMin : isRest ? 0 : lib.durationMin;
 
+  // 7-day rota strip for context, reusing the fatigue engine's day plans
+  const ribbonDays: ShiftRibbonDay[] = plans.map((p, i) => ({
+    type: p.shift ? (p.shift.isNight ? 'night' : 'day') : 'off',
+    label: p.date.toLocaleDateString(undefined, { weekday: 'narrow' }),
+    today: i === 0,
+    session: userWorkouts.some((wk) => wk.datetime.slice(0, 10) === p.dateKey),
+  }));
+
   return (
-    <div className="space-y-6 sm:space-y-8">
-      {/* ── header: greeting + one-line shift status ── */}
-      <div>
-        <h1 className="font-display text-3xl sm:text-4xl leading-tight">
-          {greeting(now)}, {firstName}
-        </h1>
-        <div className="flex items-center gap-1.5 text-sm text-ink-400 mt-1">
-          {today.shift ? (
-            <span className="flex items-center gap-1.5">
-              {today.shift.isNight ? <Moon className="h-3.5 w-3.5 text-night-300" /> : <Sun className="h-3.5 w-3.5 text-day-300" />}
-              {onShiftNow ? 'On shift now' : `Shift ${fmtTime(today.shift.start)}–${fmtTime(today.shift.end)}`}
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5">
-              <Sun className="h-3.5 w-3.5 text-ember-300" /> No shift today
-            </span>
-          )}
-          <span className="text-ink-700">·</span>
-          <span>{FATIGUE_SUBTITLE[today.recommendation]}</span>
-          <button onClick={() => setEditingDay((v) => !v)} className="ml-auto text-ink-600 p-1 -m-1">
-            <Pencil className="h-3.5 w-3.5" />
+    <div className="space-y-6">
+      {/* ── greeting + live shift status ── */}
+      <header className="rise" style={rise(0)}>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => go('profile')}
+            aria-label="Profile"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[rgba(255,106,69,.35)]
+              bg-action-primary-quiet font-display text-[15px] font-semibold text-coral-300"
+          >
+            {firstName.slice(0, 1).toUpperCase()}
+          </button>
+          <h1 className="min-w-0 flex-1 truncate font-display text-[26px] font-semibold leading-tight tracking-[-0.02em] text-fg-primary">
+            {greeting(now)}, {firstName}
+          </h1>
+          <button
+            onClick={() => setEditingDay((v) => !v)}
+            aria-label="Correct today's shift"
+            aria-expanded={editingDay}
+            className="shrink-0 rounded-control p-2 text-fg-disabled hover:text-fg-secondary"
+          >
+            <Pencil className="h-4 w-4" />
           </button>
         </div>
+
+        <p className="mt-2.5 flex items-center gap-2 text-[14px] text-fg-secondary">
+          {today.shift ? (
+            <>
+              {today.shift.isNight
+                ? <Moon className="h-4 w-4 shrink-0 text-shift-night" />
+                : <Sun className="h-4 w-4 shrink-0 text-shift-day" />}
+              {onShiftNow
+                ? 'On shift now'
+                : <>Shift <span className="num">{fmtTime(today.shift.start)}</span> to <span className="num">{fmtTime(today.shift.end)}</span></>}
+            </>
+          ) : (
+            <>
+              <Sun className="h-4 w-4 shrink-0 text-fg-tertiary" />
+              No shift today
+            </>
+          )}
+        </p>
+
         {editingDay && (
           <div className="mt-3">
             <OverrideEditor
@@ -178,67 +195,125 @@ export default function Today({ go, onStart }: { go: (t: Tab) => void; onStart: 
             />
           </div>
         )}
-      </div>
+      </header>
 
-      {/* ── hero: fatigue bar + today's session + primary action, all above the fold ── */}
-      <section className="rounded-3xl bg-ink-900/60 p-5">
-        <FatigueReadout score={today.fatigue} subtitle={FATIGUE_SUBTITLE[today.recommendation]} />
+      {/* ── status panel: the page's subject, on a load-keyed motif ground ── */}
+      <section
+        className="rise relative overflow-hidden rounded-card border border-line-subtle bg-surface-card shadow-sm"
+        style={rise(1)}
+      >
+        <LoadMotif level={level} intensity={0.9} scale={1.6} />
+        {/* keeps the readout legible over the pattern */}
+        <div className="absolute inset-0 bg-gradient-to-b from-surface-card/60 via-surface-card/85 to-surface-card" />
+        <span className={`absolute inset-y-0 left-0 w-[3px] ${LOAD_RULE[level]}`} aria-hidden />
 
-        <div className="mt-5 pt-5 border-t border-ink-800 flex items-center gap-4">
-          <div className="min-w-0 flex-1">
-            <p className="text-ink-500 text-[11px] font-semibold uppercase tracking-[0.14em]">
-              {isDone ? 'Done for today' : isRest ? 'Rest day' : 'Today'}
-            </p>
-            <p className="font-display text-xl leading-tight truncate">{isDone ? `${doneToday.length} session${doneToday.length > 1 ? 's' : ''} logged` : sessionName}</p>
-            {!isDone && (
-              <p className="text-xs text-ink-500 truncate">
-                {isRest ? 'Recovery is training too' : `${plan.length > 0 ? `${plan.length} exercises` : lib.type} · ${mins} min`}
+        <div className="relative p-5">
+          <div className="flex items-center gap-5">
+            <FatigueGauge value={today.fatigue} size={116} thickness={9} label="Fatigue" />
+            <div className="min-w-0 flex-1">
+              <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${LOAD_TEXT[level]}`}>
+                {isDone ? 'Done for today' : LOAD_LABEL[level]}
               </p>
-            )}
-            {isDone && <p className="text-xs text-ink-500">{doneMins} min{doneVol > 0 && ` · ${doneVol} kg`}</p>}
+              <p className="mt-1 font-display text-[20px] font-semibold leading-tight tracking-[-0.01em] text-fg-primary">
+                {isDone
+                  ? `${doneToday.length} session${doneToday.length > 1 ? 's' : ''} logged`
+                  : isRest
+                    ? 'Nothing scheduled'
+                    : sessionName}
+              </p>
+              {/* no advice line once the work is done: the stat strip below says
+                  what happened, and "push hard today" would contradict it */}
+              {!isDone && (
+                <p className="mt-1 text-[13px] leading-relaxed text-fg-secondary">
+                  {isRest
+                    ? 'Recovery is training too.'
+                    : `${plan.length > 0 ? `${plan.length} exercises` : lib.type}, ${mins} min`}
+                </p>
+              )}
+              {sleepToday && (
+                <p className="mt-1.5 text-[12px] text-fg-tertiary">Adjusted for your sleep</p>
+              )}
+            </div>
           </div>
-        </div>
 
-        {isDone ? (
-          <div className="mt-4 flex items-center gap-2 rounded-2xl bg-ember-400/10 px-4 py-3">
-            <Check className="h-4 w-4 text-ember-300 shrink-0" strokeWidth={3} />
-            <span className="text-sm text-ember-300 font-semibold">Nice work — you're set for today</span>
-          </div>
-        ) : isRest ? (
-          <button
-            onClick={startSuggested}
-            className="mt-4 w-full rounded-xl border border-ink-700 py-3 text-sm font-semibold text-ink-300 active:bg-ink-800"
-          >
-            Do the 10-min reset anyway
-          </button>
-        ) : (
-          <button
-            onClick={() => (w ? onStart(w.id) : startSuggested())}
-            className="mt-4 w-full rounded-xl bg-ember-400 text-ink-950 font-bold py-3.5 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-          >
-            <Play className="h-5 w-5" strokeWidth={2.5} />
-            {w ? (w.startedAt ? 'Resume workout' : 'Start workout') : START_LABELS[today.recommendation]}
-          </button>
-        )}
+          {/* what drove the score, sitting with the score rather than in the footer */}
+          {!isDone && today.reasons.length > 0 && (
+            <ul className="mt-4 flex flex-wrap gap-x-2 gap-y-1.5">
+              {today.reasons.slice(0, 3).map((r) => (
+                <li key={r} className="num rounded-pill bg-surface-inset px-2.5 py-1 text-[11px] text-fg-tertiary">
+                  {r}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* done-state numbers borrow the stat-strip idiom from the workout detail page */}
+          {isDone && (
+            <dl className="mt-4 flex items-center gap-6 border-t border-line-subtle pt-4">
+              {[
+                { value: doneToday.length, label: doneToday.length === 1 ? 'Session' : 'Sessions' },
+                { value: doneMins, label: 'Minutes' },
+                ...(doneVol > 0 ? [{ value: `${doneVol}`, label: 'kg lifted' }] : []),
+              ].map(({ value, label }) => (
+                <div key={label}>
+                  <dd className="readout text-[22px] text-fg-primary">{value}</dd>
+                  <dt className="mt-1 text-[11px] uppercase tracking-[0.08em] text-fg-tertiary">{label}</dt>
+                </div>
+              ))}
+            </dl>
+          )}
+
+          {isDone ? (
+            <p className="mt-4 flex items-center gap-2 text-[14px] font-semibold text-amber-400">
+              <Check className="h-4 w-4 shrink-0" strokeWidth={3} />
+              You're set for today
+            </p>
+          ) : (
+            <Button
+              variant={isRest ? 'secondary' : 'accent'}
+              size="lg"
+              fullWidth
+              icon={Play}
+              onClick={() => (w ? onStart(w.id) : startSuggested())}
+              className="mt-5"
+            >
+              {w ? (w.startedAt ? 'Resume workout' : 'Start workout') : START_LABELS[level]}
+            </Button>
+          )}
+        </div>
       </section>
 
-      {/* ── sleep log — sits right under the fatigue/session hero, one line once logged ── */}
-      <section>
+      {/* ── rotation context: bare, no container, so it reads as a chart not a card ── */}
+      <section className="rise" style={rise(2)}>
+        <ShiftRibbon days={ribbonDays} height={28} />
+        <p className="mt-2 text-[13px] text-fg-tertiary">
+          {tomorrow && (
+            <>Tomorrow {tomorrow.shift
+              ? <><span className="num">{fmtTime(tomorrow.shift.start)}</span> to <span className="num">{fmtTime(tomorrow.shift.end)}</span></>
+              : 'off'}, {FATIGUE_SUBTITLE[tomorrow.recommendation].toLowerCase()}.
+            </>
+          )}
+        </p>
+      </section>
+
+      {/* ── sleep: a single row once answered, a choice while it isn't ── */}
+      <section className="rise" style={rise(3)}>
         {sleepToday && !editingSleep ? (
           <button
             onClick={() => setEditingSleep(true)}
-            className="w-full flex items-center justify-between rounded-2xl bg-ink-900/60 px-5 py-3.5"
+            className="flex w-full items-center gap-2.5 rounded-control border border-line-subtle bg-surface-card px-4 py-3
+              text-left transition-colors duration-fast ease-standard hover:border-line-default"
           >
-            <span className="flex items-center gap-2 text-sm text-ink-300">
-              <BedDouble className="h-4 w-4 text-ink-500" />
+            <BedDouble className="h-4 w-4 shrink-0 text-fg-tertiary" />
+            <span className="flex-1 text-[14px] text-fg-secondary">
               {SLEEP_OPTIONS.find((o) => o.q === sleepToday)?.label}
             </span>
-            <span className="text-xs text-ink-500 font-semibold">Change</span>
+            <span className="text-[13px] font-semibold text-fg-tertiary">Change</span>
           </button>
         ) : (
-          <div className="rounded-3xl bg-ink-900/60 p-5">
-            <p className="text-sm text-ink-400 flex items-center gap-2 mb-3">
-              <BedDouble className="h-4 w-4" /> How did you sleep?
+          <div className="rounded-control border border-line-subtle bg-surface-card p-4">
+            <p className="mb-3 flex items-center gap-2 text-[14px] text-fg-secondary">
+              <BedDouble className="h-4 w-4 shrink-0" /> How did you sleep?
             </p>
             <div className="grid grid-cols-3 gap-2">
               {SLEEP_OPTIONS.map(({ q, label }) => (
@@ -248,8 +323,8 @@ export default function Today({ go, onStart }: { go: (t: Tab) => void; onStart: 
                     dispatch({ type: 'logSleep', userId: user.id, dateKey: todayKey, quality: q });
                     setEditingSleep(false);
                   }}
-                  className={`rounded-xl py-3 text-xs font-semibold transition-colors ${
-                    sleepToday === q ? 'bg-night-400 text-ink-950' : 'bg-ink-800 text-ink-400'
+                  className={`rounded-control py-3 text-[12px] font-semibold transition-colors duration-fast ease-standard ${
+                    sleepToday === q ? 'bg-action-primary text-fg-onPrimary' : 'bg-surface-raised text-fg-secondary hover:text-fg-primary'
                   }`}
                 >
                   {label}
@@ -260,43 +335,44 @@ export default function Today({ go, onStart }: { go: (t: Tab) => void; onStart: 
         )}
       </section>
 
-      {/* ── exercise breakdown (below the fold is fine — hero already covers "what do I do") ── */}
+      {/* ── what's in the session: numbered rows, matching the workout detail page ── */}
       {!isDone && plan.length > 0 && (
-        <section className="rounded-3xl bg-ink-900/60 p-5">
-          <ul className="divide-y divide-ink-800">
+        <section className="rise" style={rise(4)}>
+          <h2 className="mb-2.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-fg-tertiary">The session</h2>
+          <ul className="overflow-hidden rounded-card border border-line-subtle bg-surface-card">
             {plan.map((e, i) => (
-              <li key={i} className="py-2.5 flex items-center justify-between">
-                <p className="font-medium text-sm text-ink-200">{e.name}</p>
-                <p className="text-xs text-ink-500">{e.sets} × {e.reps}</p>
+              <li key={i} className={`flex items-center gap-3 px-4 py-3 ${i > 0 ? 'border-t border-line-subtle' : ''}`}>
+                <span className="readout flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-surface-inset text-[13px] text-fg-tertiary">
+                  {i + 1}
+                </span>
+                <p className="min-w-0 flex-1 truncate text-[14px] font-medium text-fg-primary">{e.name}</p>
+                <p className="num shrink-0 text-[13px] text-fg-secondary">{e.sets} × {e.reps}</p>
               </li>
             ))}
           </ul>
         </section>
       )}
 
-      {isDone && (
-        <section className="space-y-2">
+      {isDone && doneToday.length > 0 && (
+        <section className="rise space-y-2" style={rise(4)}>
           {doneToday.map((wk) => (
-            <div key={wk.id} className="flex items-center gap-2.5 rounded-2xl bg-ember-400/5 px-4 py-3">
-              <Check className="h-4 w-4 text-ember-300 shrink-0" strokeWidth={3} />
-              <span className="text-sm text-ink-400 flex-1 line-through">{wk.notes ?? wk.type}</span>
-              <span className="text-xs text-ember-300 font-semibold">{wk.durationMin}m</span>
+            <div key={wk.id} className="flex items-center gap-2.5 rounded-control border border-line-subtle bg-surface-card px-4 py-3">
+              <Check className="h-4 w-4 shrink-0 text-amber-400" strokeWidth={3} />
+              <span className="flex-1 truncate text-[14px] text-fg-tertiary line-through">{wk.notes ?? wk.type}</span>
+              <span className="num shrink-0 text-[13px] font-semibold text-amber-400">{wk.durationMin}m</span>
             </div>
           ))}
-          {tomorrow && (
-            <p className="text-sm text-ink-500 px-1">
-              Tomorrow: {tomorrow.shift ? `${fmtTime(tomorrow.shift.start)}–${fmtTime(tomorrow.shift.end)}` : 'off'} · {FATIGUE_SUBTITLE[tomorrow.recommendation].toLowerCase()}
-            </p>
-          )}
         </section>
       )}
 
-      <button
-        onClick={() => go('workouts')}
-        className="text-ink-500 text-xs font-semibold flex items-center gap-1"
-      >
-        Plan ahead in the Planner <ChevronRight className="h-3.5 w-3.5" />
-      </button>
+      <footer className="rise pt-1" style={rise(5)}>
+        <button
+          onClick={() => go('workouts')}
+          className="flex items-center gap-1 text-[13px] font-semibold text-fg-tertiary hover:text-fg-secondary"
+        >
+          Browse workouts <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </footer>
     </div>
   );
 }
@@ -321,19 +397,19 @@ function OverrideEditor({
   };
 
   return (
-    <div className="rounded-2xl bg-ink-800/50 border border-ink-700 p-3.5 space-y-2.5">
-      <p className="text-xs text-ink-400">Reality check for today:</p>
+    <div className="space-y-2.5 rounded-card border border-line-default bg-surface-raised p-3.5">
+      <p className="text-[13px] text-fg-secondary">Reality check for today:</p>
       <div className="flex gap-2">
-        <button onClick={saveOff} className="flex-1 rounded-lg bg-ink-800 border border-ink-600 py-2 text-xs font-semibold text-ink-200 active:bg-ink-700">
+        <button onClick={saveOff} className="flex-1 rounded-control border border-line-strong bg-surface-inset py-2 text-[12px] font-semibold text-fg-body hover:bg-surface-hover">
           Off / sick instead
         </button>
-        <button onClick={() => setCustom((c) => !c)} className={`flex-1 rounded-lg border py-2 text-xs font-semibold active:bg-ink-700 ${custom ? 'bg-ink-700 border-ink-500 text-ink-100' : 'bg-ink-800 border-ink-600 text-ink-200'}`}>
+        <button onClick={() => setCustom((c) => !c)} className={`flex-1 rounded-control border py-2 text-[12px] font-semibold hover:bg-surface-hover ${custom ? 'border-line-strong bg-surface-overlay text-fg-primary' : 'border-line-strong bg-surface-inset text-fg-body'}`}>
           Custom shift
         </button>
         {existing && (
           <button
             onClick={() => { dispatch({ type: 'clearOverride', userId, dateKey: key }); onClose(); }}
-            className="flex-1 rounded-lg bg-ink-800 border border-ink-600 py-2 text-xs font-semibold text-caution-300 active:bg-ink-700"
+            className="flex-1 rounded-control border border-line-strong bg-surface-inset py-2 text-[12px] font-semibold text-amber-400 hover:bg-surface-hover"
           >
             Reset to rotation
           </button>
@@ -342,28 +418,11 @@ function OverrideEditor({
       {custom && (
         <div className="flex items-center gap-2">
           <TimePicker value={start} onChange={setStart} className="flex-1" />
-          <span className="text-ink-500 text-sm">→</span>
+          <span className="text-[14px] text-fg-tertiary">to</span>
           <TimePicker value={end} onChange={setEnd} className="flex-1" />
-          <button onClick={saveShift} className="rounded-lg bg-ember-400 text-ink-950 text-xs font-bold px-3.5 py-2.5">Save</button>
+          <button onClick={saveShift} className="rounded-control bg-action-accent px-3.5 py-2.5 text-[12px] font-bold text-fg-onAccent">Save</button>
         </div>
       )}
-    </div>
-  );
-}
-
-export function EmptyState({
-  title, body, cta, onCta,
-}: { title: string; body: string; cta: string; onCta: () => void }) {
-  return (
-    <div className="rounded-3xl bg-ink-900/60 p-8 text-center">
-      <h2 className="font-display text-3xl leading-tight mb-2.5">{title}</h2>
-      <p className="text-sm text-ink-400 leading-relaxed mb-6">{body}</p>
-      <button
-        onClick={onCta}
-        className="rounded-xl bg-ember-400 text-ink-950 font-bold px-6 py-3.5 active:scale-[0.98] transition-transform"
-      >
-        {cta}
-      </button>
     </div>
   );
 }

@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { CalendarDays, Dumbbell, UserRound, LayoutDashboard, TrendingUp } from 'lucide-react';
 import { StoreProvider, useStore } from './lib/store';
 import { load, save } from './lib/storage';
-import Logo from './components/Logo';
+import { TabBar, type TabBarItem } from './components/ds';
 import Onboarding from './pages/Onboarding';
 import Auth from './pages/Auth';
 import Today from './pages/Today';
@@ -19,7 +19,7 @@ import Tracker from './pages/Tracker';
 
 export type Tab = 'today' | 'shifts' | 'workouts' | 'progress' | 'profile';
 
-const TABS: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
+const TABS: TabBarItem<Tab>[] = [
   { id: 'today', label: 'Today', icon: LayoutDashboard },
   { id: 'shifts', label: 'Shifts', icon: CalendarDays },
   { id: 'workouts', label: 'Workouts', icon: Dumbbell },
@@ -70,14 +70,15 @@ function Shell() {
   }
 
   return (
-    <div className="min-h-dvh bg-ink-950 text-ink-100 flex flex-col">
-      {/* header */}
-      <header className="sticky top-0 z-10 bg-ink-950/90 backdrop-blur border-b border-ink-900">
-        <div className="mx-auto max-w-md px-5 py-3 flex items-center">
-          <Logo size="sm" />
-          <span className="ml-auto text-xs text-ink-500">Hey, {user.name.split(' ')[0]}</span>
-        </div>
-      </header>
+    <div className="min-h-dvh bg-bg-base text-fg-primary flex flex-col">
+      {/* Status-bar scrim. Deliberately empty: anything rendered up here sits
+          under the iPhone clock (left) and battery readout (right). It only
+          reserves the safe-area inset and blurs content scrolling beneath it.
+          Branding lives on Auth/Onboarding; the greeting lives on Today. */}
+      <div
+        aria-hidden
+        className="sticky top-0 z-20 h-[env(safe-area-inset-top)] bg-bg-base/95 backdrop-blur"
+      />
 
       {/* content */}
       <main className="flex-1 mx-auto w-full max-w-md px-5 pt-5 pb-28">
@@ -89,24 +90,11 @@ function Shell() {
       </main>
 
       {/* bottom tab bar — one-thumb reach */}
-      <nav className="fixed bottom-0 inset-x-0 z-10 bg-ink-950/95 backdrop-blur border-t border-ink-900 pb-[env(safe-area-inset-bottom)]">
-        <div className="mx-auto max-w-md grid grid-cols-5">
-          {TABS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-semibold transition-colors ${
-                tab === id ? 'text-shock-300' : 'text-ink-500'
-              }`}
-            >
-              <span className={`px-3.5 py-1 rounded-full transition-colors ${tab === id ? 'bg-shock-400/15' : ''}`}>
-                <Icon className="h-5 w-5" strokeWidth={tab === id ? 2.5 : 2} />
-              </span>
-              {label}
-            </button>
-          ))}
+      <div className="fixed bottom-0 inset-x-0 z-20 pb-[env(safe-area-inset-bottom)] bg-surface-card/95 backdrop-blur border-t border-line-subtle">
+        <div className="mx-auto max-w-md">
+          <TabBar items={TABS} active={tab} onChange={setTab} className="border-t-0 bg-transparent" />
         </div>
-      </nav>
+      </div>
     </div>
   );
 }

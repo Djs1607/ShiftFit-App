@@ -4,6 +4,7 @@ import { useStore } from '../lib/store';
 import { uid } from '../lib/storage';
 import type { CustomWorkout, ExercisePlan } from '../lib/library';
 import type { WorkoutIntensity } from '../lib/types';
+import { Button, IconButton, Input, Select } from '../components/ds';
 
 const TYPES = ['Strength', 'Run', 'Cycle', 'Swim', 'HIIT', 'Mobility', 'Walk', 'Other'];
 
@@ -59,49 +60,38 @@ export default function WorkoutBuilder({
     onDone();
   };
 
-  const input = 'rounded-lg bg-ink-800 border border-ink-700 px-3 py-2.5 text-sm outline-none focus:border-shock-400/60';
+  const numInput = 'w-16 text-center rounded-control bg-surface-inset border border-line-default px-2 py-2 text-[14px] font-mono text-fg-primary outline-none focus:border-line-focus';
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-display font-semibold uppercase tracking-[0.06em]">{existing ? 'Edit workout' : 'Build a workout'}</h1>
-        <button onClick={onDone} className="p-2 rounded-lg text-ink-400 hover:bg-ink-800" aria-label="Close">
-          <X className="h-5 w-5" />
-        </button>
+        <h1 className="font-display text-[26px] font-semibold leading-tight tracking-[-0.02em] text-fg-primary">{existing ? 'Edit workout' : 'Build a workout'}</h1>
+        <IconButton icon={X} label="Close" onClick={onDone} />
       </div>
 
-      <input
-        className="w-full rounded-xl bg-ink-900 border border-ink-800 px-4 py-3 text-base outline-none focus:border-shock-400/60 placeholder:text-ink-600"
+      <Input
         placeholder="Workout name (e.g. Post-night-shift legs)"
         value={name}
         onChange={(e) => setName(e.target.value)}
+        size="lg"
       />
 
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-xs text-ink-500 block mb-1.5">Type</label>
-          <select value={type} onChange={(e) => setType(e.target.value)} className={`w-full ${input}`}>
-            {TYPES.map((t) => <option key={t}>{t}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="text-xs text-ink-500 block mb-1.5">Duration (min)</label>
-          <input
-            type="number" min={5} max={600} step={5} value={duration}
-            onChange={(e) => setDuration(Math.max(5, Number(e.target.value) || 0))}
-            className={`w-full ${input}`}
-          />
-        </div>
+        <Select label="Type" value={type} onChange={(e) => setType(e.target.value)} options={TYPES} />
+        <Input
+          type="number" min={5} max={600} step={5} label="Duration (min)" value={duration}
+          onChange={(e) => setDuration(Math.max(5, Number(e.target.value) || 0))}
+        />
       </div>
 
       <div>
-        <label className="text-xs text-ink-500 block mb-1.5">Intensity</label>
+        <label className="mb-1.5 block text-[12px] font-semibold uppercase tracking-[0.06em] text-fg-tertiary">Intensity</label>
         <div className="grid grid-cols-3 gap-2">
           {(['light', 'moderate', 'hard'] as const).map((lv) => (
             <button
               type="button" key={lv} onClick={() => setIntensity(lv)}
-              className={`rounded-xl py-2.5 text-sm font-semibold capitalize transition-colors ${
-                intensity === lv ? 'bg-shock-400 text-ink-950' : 'bg-ink-800 text-ink-400'
+              className={`rounded-control py-2.5 text-[14px] font-semibold capitalize transition-colors duration-fast ease-standard ${
+                intensity === lv ? 'bg-action-primary text-fg-onPrimary' : 'bg-surface-raised text-fg-tertiary'
               }`}
             >
               {lv}
@@ -112,46 +102,46 @@ export default function WorkoutBuilder({
 
       {/* exercise list editor */}
       <div>
-        <p className="text-xs font-semibold text-ink-500 uppercase tracking-wider mb-2">
+        <p className="text-[12px] font-semibold uppercase tracking-[0.06em] text-fg-tertiary mb-2">
           Exercises — {exercises.length}
         </p>
         <ul className="space-y-2">
           {exercises.map((ex, i) => (
-            <li key={i} className="rounded-2xl bg-ink-900 border border-ink-800 p-3">
+            <li key={i} className="rounded-card bg-surface-card border border-line-subtle p-3">
               <div className="flex items-center gap-2">
                 <div className="flex flex-col">
-                  <button onClick={() => move(i, -1)} disabled={i === 0} className="text-ink-500 disabled:opacity-25" aria-label="Move up">
+                  <button onClick={() => move(i, -1)} disabled={i === 0} className="text-fg-tertiary disabled:opacity-25" aria-label="Move up">
                     <ChevronUp className="h-4 w-4" />
                   </button>
-                  <button onClick={() => move(i, 1)} disabled={i === exercises.length - 1} className="text-ink-500 disabled:opacity-25" aria-label="Move down">
+                  <button onClick={() => move(i, 1)} disabled={i === exercises.length - 1} className="text-fg-tertiary disabled:opacity-25" aria-label="Move down">
                     <ChevronDown className="h-4 w-4" />
                   </button>
                 </div>
-                <input
+                <Input
                   value={ex.name}
                   onChange={(e) => setEx(i, { name: e.target.value })}
                   placeholder={`Exercise ${i + 1}`}
-                  className={`flex-1 min-w-0 ${input}`}
+                  wrapperClassName="flex-1 min-w-0"
                 />
                 <button
                   onClick={() => setExercises((xs) => xs.filter((_, j) => j !== i))}
-                  className="p-2 text-ink-600 hover:text-cooked-400" aria-label="Remove exercise"
+                  className="p-2 text-fg-disabled hover:text-feedback-danger" aria-label="Remove exercise"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
               <div className="flex items-center gap-2 mt-2 ml-8">
-                <label className="text-[11px] text-ink-500">Sets</label>
+                <label className="text-[11px] text-fg-tertiary">Sets</label>
                 <input
                   type="number" min={1} max={20} value={ex.sets}
                   onChange={(e) => setEx(i, { sets: Math.max(1, Number(e.target.value) || 1) })}
-                  className={`w-16 text-center ${input}`}
+                  className={numInput}
                 />
-                <label className="text-[11px] text-ink-500">Reps</label>
+                <label className="text-[11px] text-fg-tertiary">Reps</label>
                 <input
                   type="number" min={1} max={500} value={ex.reps}
                   onChange={(e) => setEx(i, { reps: Math.max(1, Number(e.target.value) || 1) })}
-                  className={`w-16 text-center ${input}`}
+                  className={numInput}
                 />
               </div>
             </li>
@@ -159,21 +149,17 @@ export default function WorkoutBuilder({
         </ul>
         <button
           onClick={() => setExercises((xs) => [...xs, { name: '', sets: 3, reps: 10 }])}
-          className="mt-2 w-full rounded-xl border border-dashed border-ink-700 py-3 text-sm font-semibold text-ink-400 active:bg-ink-800 flex items-center justify-center gap-2"
+          className="mt-2 w-full rounded-control border border-dashed border-line-strong py-3 text-[14px] font-semibold text-fg-tertiary hover:bg-surface-hover flex items-center justify-center gap-2"
         >
           <Plus className="h-4 w-4" /> Add exercise
         </button>
       </div>
 
-      {error && <p className="text-cooked-400 text-sm">{error}</p>}
+      {error && <p className="text-feedback-danger text-[13px]">{error}</p>}
 
-      <button
-        onClick={save}
-        className="w-full rounded-xl bg-shock-400 text-ink-950 font-bold py-3.5 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-      >
-        <Check className="h-5 w-5" strokeWidth={2.5} />
+      <Button variant="primary" size="lg" fullWidth icon={Check} onClick={save}>
         {existing ? 'Save changes' : 'Save workout'}
-      </button>
+      </Button>
     </div>
   );
 }

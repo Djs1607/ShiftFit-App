@@ -19,7 +19,7 @@ export default function TimePicker({
   const mins = BASE_MINS.includes(m) ? BASE_MINS : [...BASE_MINS, m].sort();
 
   const sel =
-    'flex-1 rounded-lg bg-ink-800 border border-ink-700 px-2 py-2.5 text-sm text-center font-semibold outline-none focus:border-shock-400/60 appearance-none';
+    'flex-1 rounded-control bg-surface-inset border border-line-default px-2 py-2.5 text-[14px] text-center font-semibold font-mono text-fg-primary outline-none focus:border-line-focus appearance-none';
 
   return (
     <div className={`flex items-center gap-1.5 ${className}`}>
@@ -28,7 +28,7 @@ export default function TimePicker({
           <option key={hh} value={hh}>{hh}</option>
         ))}
       </select>
-      <span className="text-ink-500 font-bold">:</span>
+      <span className="text-fg-tertiary font-bold">:</span>
       <select value={m} onChange={(e) => onChange(`${h}:${e.target.value}`)} className={sel} aria-label="Minute">
         {mins.map((mm) => (
           <option key={mm} value={mm}>{mm}</option>

@@ -2,77 +2,134 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Shift Fit Design System tokens ──────────────────────────────
+   Warm-neutral palette matched to theshiftfitapp.com landing page.
+   Dark-mode only — html carries class="dark" permanently. */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
-    --radius: 0.625rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
+    /* Base ramp: warm neutrals (matches landing page) */
+    --sf-ink-950: #050505;
+    --sf-ink-900: #0A0A0A;
+    --sf-ink-850: #101010;
+    --sf-ink-800: #171717;
+    --sf-ink-750: #1E1E1E;
+    --sf-ink-700: #262626;
+    --sf-ink-650: #333333;
+    --sf-ink-600: #4A4A47;
+    --sf-ink-500: #5C5B56;
+    --sf-ink-400: #6B6A63;
+    --sf-ink-300: #A3A29A;
+    --sf-ink-200: #D4D3CE;
+    --sf-ink-100: #F6F5F1;
+    --sf-ink-000: #FFFFFF;
 
-  .dark {
-    --background: 240 27% 8%;
-    --foreground: 240 15% 92%;
-    --card: 240 28% 14%;
-    --card-foreground: 240 15% 92%;
-    --popover: 240 28% 14%;
-    --popover-foreground: 240 15% 92%;
-    --primary: 268 100% 82%;
-    --primary-foreground: 240 27% 8%;
-    --secondary: 240 20% 20%;
-    --secondary-foreground: 240 15% 92%;
-    --muted: 240 20% 20%;
-    --muted-foreground: 240 10% 66%;
-    --accent: 240 20% 20%;
-    --accent-foreground: 240 15% 92%;
-    --destructive: 351 89% 72%;
-    --destructive-foreground: 240 27% 8%;
-    --border: 240 20% 20%;
-    --input: 240 20% 20%;
-    --ring: 268 100% 82%;
-    --sidebar-background: 240 28% 14%;
-    --sidebar-foreground: 240 15% 92%;
-    --sidebar-primary: 268 100% 82%;
-    --sidebar-primary-foreground: 240 27% 8%;
-    --sidebar-accent: 240 20% 20%;
-    --sidebar-accent-foreground: 240 15% 92%;
-    --sidebar-border: 240 20% 20%;
-    --sidebar-ring: 268 100% 82%;
+    /* Coral — the ONLY saturated brand colour, matched to
+       theshiftfitapp.com. One hue, two intensities: 500 (ember) is the
+       calmer, deeper tone for large fills — buttons, CTAs — so they don't
+       shout on a screen read half-asleep. 400 is the original vivid
+       landing-page coral, reserved for thin marks: focus rings, hover
+       states, small text/badges. There is no second "accent" hue —
+       action-accent aliases straight onto this same ramp. */
+    --sf-coral-700: #A0421F;
+    --sf-coral-600: #C2542A;
+    --sf-coral-500: #E2603F;
+    --sf-coral-400: #FF6A45;
+    --sf-coral-300: #FFA68F;
+    --sf-coral-100: #FFD9CE;
+
+    /* amber = coral, on purpose. Kept as a separate variable name only
+       because dozens of call sites already reference `amber-*` /
+       `feedback-warning`; giving it identical values retires the second
+       brand hue without a full rename pass. */
+    --sf-amber-700: #A0421F;
+    --sf-amber-600: #C2542A;
+    --sf-amber-500: #E2603F;
+    --sf-amber-400: #FF6A45;
+    --sf-amber-300: #FFA68F;
+
+    --sf-green-500: #5E9E7E;
+    --sf-green-400: #74B694;
+    --sf-red-500: #C4614F;
+    --sf-red-400: #D67C69;
+
+    /* Fatigue severity ramp — the only place hue means "how heavy is this
+       day". Independent of the brand coral above. */
+    --sf-fatigue-1: #5E9E7E;
+    --sf-fatigue-2: #8FA96C;
+    --sf-fatigue-3: #D68A3A;
+    --sf-fatigue-4: #D07E4A;
+    --sf-fatigue-5: #C4614F;
+
+    /* Shift ribbon — a data track, not a brand surface. Fully neutral grey
+       so it never competes with the single coral accent; day/night/swing
+       read by value (light → dark), not by colour. */
+    --sf-shift-day: #A3A29A;
+    --sf-shift-swing: #7A7972;
+    --sf-shift-night: #4A4944;
+    --sf-shift-off: #2A2A26;
+
+    /* Semantic aliases */
+    --bg-base: var(--sf-ink-900);
+    --bg-sunken: var(--sf-ink-950);
+    --bg-scrim: rgba(5, 5, 5, .72);
+
+    --surface-card: var(--sf-ink-800);
+    --surface-raised: var(--sf-ink-750);
+    --surface-overlay: var(--sf-ink-700);
+    --surface-inset: var(--sf-ink-850);
+    --surface-hover: rgba(255, 255, 255, .04);
+    --surface-press: rgba(255, 255, 255, .07);
+    --surface-selected: rgba(255, 106, 69, .12);
+
+    --border-subtle: rgba(255, 255, 255, .06);
+    --border-default: var(--sf-ink-650);
+    --border-strong: var(--sf-ink-600);
+    --border-focus: var(--sf-coral-400);
+
+    --text-primary: var(--sf-ink-100);
+    --text-body: var(--sf-ink-200);
+    --text-secondary: var(--sf-ink-300);
+    --text-tertiary: var(--sf-ink-400);
+    --text-disabled: var(--sf-ink-500);
+    --text-on-primary: #FFF8F5;
+    --text-on-accent: #FFF8F5;
+
+    --action-primary: var(--sf-coral-500);
+    --action-primary-hover: var(--sf-coral-400);
+    --action-primary-press: var(--sf-coral-600);
+    --action-primary-quiet: rgba(226, 96, 63, .14);
+
+    --action-accent: var(--sf-coral-500);
+    --action-accent-hover: var(--sf-coral-400);
+    --action-accent-press: var(--sf-coral-600);
+    --action-accent-quiet: rgba(226, 96, 63, .14);
+
+    --feedback-success: var(--sf-green-500);
+    --feedback-success-quiet: rgba(94, 158, 126, .14);
+    --feedback-warning: var(--sf-coral-500);
+    --feedback-warning-quiet: rgba(226, 96, 63, .14);
+    --feedback-danger: var(--sf-red-500);
+    --feedback-danger-quiet: rgba(196, 97, 79, .14);
+    --feedback-info: var(--sf-coral-500);
+    --feedback-info-quiet: rgba(226, 96, 63, .12);
+
+    --data-track: rgba(255, 255, 255, .08);
+    --data-grid: rgba(255, 255, 255, .05);
+    --focus-ring: 0 0 0 2px var(--bg-base), 0 0 0 4px var(--sf-coral-400);
+
+    --radius: 0.625rem;
   }
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-line;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-bg-base text-fg-body;
   }
 }
+
 /* ── ShiftFit polish layer ─────────────────────────────────────── */
 @layer base {
   html {
@@ -80,10 +137,13 @@
     scroll-behavior: smooth;
   }
   body {
-    background-color: #0f0f1a; /* ink-950 — no white flash on overscroll */
     font-feature-settings: 'cv11', 'ss01';
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4 {
+    font-family: theme('fontFamily.display');
+    letter-spacing: -0.01em;
   }
   /* hide number-input spinners (they look broken on mobile) */
   input[type='number']::-webkit-outer-spin-button,
@@ -95,36 +155,67 @@
     -moz-appearance: textfield;
     appearance: textfield;
   }
+  input[type='date'] {
+    color-scheme: dark;
+  }
   ::selection {
-    background: rgb(200 162 255 / 0.3);
+    background: rgba(255, 106, 69, .30);
+  }
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
   }
   /* thin dark scrollbars */
   * {
     scrollbar-width: thin;
-    scrollbar-color: #2f2f42 transparent;
+    scrollbar-color: var(--sf-ink-650) transparent;
   }
   *::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   *::-webkit-scrollbar-thumb {
-    background: #2f2f42;
+    background: var(--sf-ink-650);
     border-radius: 999px;
   }
 }
 
 @layer utilities {
+  /* every number the user reads: tabular JetBrains Mono */
   .num {
+    font-family: theme('fontFamily.mono');
     font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1, 'zero' 1;
   }
-  /* poster-scale readout: condensed, tightly stacked, optically flush left.
-     Oswald carries side bearings that break the flush edge at display size. */
+  /* Home entrance: sections settle in sequence so the eye lands on the
+     fatigue reading first, then the action. Kept short and subtle - this
+     screen gets opened half-asleep at 4am, not admired. Motion is opt-in
+     via prefers-reduced-motion, and the no-preference guard means the
+     static end-state is what ships when motion is off. */
+  .rise {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .rise {
+      opacity: 0;
+      animation: rise 420ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation-delay: calc(var(--rise-i, 0) * 70ms);
+    }
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* metric readout — mono, tight, flush */
   .readout {
-    font-family: theme('fontFamily.display');
-    font-weight: 600;
-    line-height: 0.82;
-    letter-spacing: 0.005em;
+    font-family: theme('fontFamily.mono');
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
-    margin-left: -0.04em;
+    font-feature-settings: 'tnum' 1, 'zero' 1;
   }
 }
