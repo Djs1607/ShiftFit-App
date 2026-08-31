@@ -4,6 +4,7 @@ import { useStore } from '../lib/store';
 import { uid } from '../lib/storage';
 import { buildDayPlans, fmtTime, dateKey, localISO } from '../lib/schedule';
 import { WORKOUT_LIBRARY } from '../lib/library';
+import { PLANS } from '../lib/plans';
 import TimePicker from '../components/TimePicker';
 import LoadMotif from '../components/LoadMotif';
 import { LOAD_LABEL, LOAD_RULE, LOAD_TEXT } from '../lib/load';
@@ -57,8 +58,11 @@ function greeting(now: Date): string {
 // staggered entrance index -> CSS custom property consumed by .rise
 const rise = (i: number) => ({ '--rise-i': i }) as CSSProperties;
 
+// so a plan's session-level can be compared against today's fatigue budget
+const LEVEL_ORDER: Recommendation[] = ['rest', 'light', 'moderate', 'hard'];
+
 export default function Today({ go, onStart }: { go: (t: Tab) => void; onStart: (id: string) => void }) {
-  const { user, activePattern, userWorkouts, userSleepLogs, userOverrides, dispatch } = useStore();
+  const { user, activePattern, userWorkouts, userSleepLogs, userOverrides, userActivePlan, dispatch } = useStore();
   const [editingDay, setEditingDay] = useState(false);
   const [editingSleep, setEditingSleep] = useState(false);
 
@@ -103,7 +107,34 @@ export default function Today({ go, onStart }: { go: (t: Tab) => void; onStart: 
   const sleepToday = userSleepLogs.find((s) => s.dateKey === todayKey)?.quality;
 
   const nextWorkout = todaysWorkouts.find((w) => !w.completed);
-  const suggested = WORKOUT_LIBRARY.find((l) => l.id === START_PICKS[today.recommendation]) ?? WORKOUT_LIBRARY[0];
+  const defaultSuggestion = WORKOUT_LIBRARY.find((l) => l.id === START_PICKS[today.recommendation]) ?? WORKOUT_LIBRARY[0];
+
+  // an active plan picks *which* session comes next; fatigue still decides
+  // whether today can actually take it, same as it always has for the default pick
+  const activeTrainingPlan = userActivePlan ? PLANS.find((p) => p.id === userActivePlan.planId) ?? null : null;
+  let suggested = defaultSuggestion;
+  let planId: string | undefined;
+  let planNote: string | null = null;
+  if (activeTrainingPlan) {
+    const completedCount = userWorkouts.filter((w) => w.planId === activeTrainingPlan.id && w.completed).length;
+    const totalSessions = activeTrainingPlan.weeks * activeTrainingPlan.sessionsPerWeek;
+    if (completedCount < totalSessions) {
+      const sessionIndex = completedCount % activeTrainingPlan.sessionsPerWeek;
+      const week = Math.floor(completedCount / activeTrainingPlan.sessionsPerWeek) + 1;
+      const planLib = WORKOUT_LIBRARY.find((l) => l.id === activeTrainingPlan.sessionTemplate[sessionIndex]);
+      if (planLib) {
+        const fitsToday = LEVEL_ORDER.indexOf(planLib.level) <= LEVEL_ORDER.indexOf(today.recommendation);
+        if (fitsToday) {
+          suggested = planLib;
+          planId = activeTrainingPlan.id;
+          planNote = `${activeTrainingPlan.name} · Week ${week}, session ${sessionIndex + 1} of ${activeTrainingPlan.sessionsPerWeek}`;
+        } else {
+          planNote = `${activeTrainingPlan.name} — swapped for today's lower fatigue budget`;
+        }
+      }
+    }
+  }
+
   const isRest = !nextWorkout && today.recommendation === 'rest' && doneToday.length === 0;
   const isDone = doneToday.length > 0;
   const level = today.recommendation;
@@ -118,6 +149,7 @@ export default function Today({ go, onStart }: { go: (t: Tab) => void; onStart: 
       intensity: suggested.intensity,
       completed: false,
       libraryId: suggested.id,
+      planId,
       notes: suggested.name,
     };
     dispatch({ type: 'saveWorkout', workout: w });
@@ -229,6 +261,9 @@ export default function Today({ go, onStart }: { go: (t: Tab) => void; onStart: 
                     ? 'Recovery is training too.'
                     : `${plan.length > 0 ? `${plan.length} exercises` : lib.type}, ${mins} min`}
                 </p>
+              )}
+              {!isDone && planNote && (
+                <p className="mt-1.5 text-[12px] text-fg-tertiary">{planNote}</p>
               )}
               {sleepToday && (
                 <p className="mt-1.5 text-[12px] text-fg-tertiary">Adjusted for your sleep</p>

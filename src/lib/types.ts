@@ -51,6 +51,7 @@ export interface Workout {
   completed: boolean;
   notes?: string;
   libraryId?: string; // set when scheduled from the workout library
+  planId?: string; // set when Today generated this session from an active training plan
   exercises?: WorkoutExercise[]; // live tracker data
   startedAt?: string; // LOCAL datetime — session start
   finishedAt?: string; // LOCAL datetime — session end
@@ -89,6 +90,15 @@ export interface DayOverride {
   kind: 'off' | 'shift'; // off = rest/sick/called off; shift = custom times
   startTime?: string; // "HH:mm" when kind === 'shift'
   endTime?: string;
+}
+
+// ── Active training plan (one per user at a time) ───────────────────
+// References a TrainingPlan.id from the static catalog in lib/plans.ts.
+export interface TrainingPlanRecord {
+  id: string;
+  userId: string;
+  planId: string;
+  startedAt: string; // localISO
 }
 
 export interface DayPlan {

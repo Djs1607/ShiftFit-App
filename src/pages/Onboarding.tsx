@@ -73,7 +73,7 @@ export default function Onboarding({ onDone }: { onDone: (tab?: 'today' | 'shift
             <div className="space-y-1">
               <h1 className="font-display text-[28px] font-semibold leading-tight tracking-[-0.02em] text-fg-primary">What's your rotation?</h1>
               <p className="text-fg-secondary text-[15px]">
-                Tap one — you're set. You can edit times or build your own any time in the Shifts tab.
+                Tap one — you're set. You can edit times or build your own any time from your Profile.
               </p>
             </div>
             <Input

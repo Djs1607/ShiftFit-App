@@ -13,16 +13,20 @@ import Auth from './pages/Auth';
 import Today from './pages/Today';
 import Patterns from './pages/Patterns';
 import Workouts from './pages/Workouts';
+import Plan from './pages/Plan';
 import Progress from './pages/Progress';
 import Profile from './pages/Profile';
 import Tracker from './pages/Tracker';
 
-export type Tab = 'today' | 'shifts' | 'workouts' | 'progress' | 'profile';
+// `shifts` (the Patterns/Shifts page) is not shown in the bottom tab bar —
+// it's reached via the "Shift pattern" row on the Profile page instead,
+// since rotation editing is rare.
+export type Tab = 'today' | 'shifts' | 'workouts' | 'plan' | 'progress' | 'profile';
 
 const TABS: TabBarItem<Tab>[] = [
   { id: 'today', label: 'Today', icon: LayoutDashboard },
-  { id: 'shifts', label: 'Shifts', icon: CalendarDays },
   { id: 'workouts', label: 'Workouts', icon: Dumbbell },
+  { id: 'plan', label: 'Plan', icon: CalendarDays },
   { id: 'progress', label: 'Progress', icon: TrendingUp },
   { id: 'profile', label: 'Profile', icon: UserRound },
 ];
@@ -85,8 +89,9 @@ function Shell() {
         {tab === 'today' && <Today go={setTab} onStart={setTrackingId} />}
         {tab === 'shifts' && <Patterns />}
         {tab === 'workouts' && <Workouts go={setTab} onStart={setTrackingId} />}
+        {tab === 'plan' && <Plan />}
         {tab === 'progress' && <Progress />}
-        {tab === 'profile' && <Profile />}
+        {tab === 'profile' && <Profile go={setTab} />}
       </main>
 
       {/* bottom tab bar — one-thumb reach */}

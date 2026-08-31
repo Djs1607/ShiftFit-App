@@ -5,7 +5,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
 import type { ReactNode } from 'react';
-import type { DayOverride, ShiftPattern, SleepLog, User, Workout } from './types';
+import type { DayOverride, ShiftPattern, SleepLog, TrainingPlanRecord, User, Workout } from './types';
 import type { CustomWorkout } from './library';
 import { load, save, uid } from './storage';
 import { localISO } from './schedule';
@@ -26,6 +26,7 @@ interface State {
   sleepLogs: SleepLog[];
   overrides: DayOverride[];
   customWorkouts: CustomWorkout[];
+  trainingPlans: TrainingPlanRecord[];
 }
 
 type Action =
@@ -43,7 +44,9 @@ type Action =
   | { type: 'saveOverride'; override: DayOverride }
   | { type: 'clearOverride'; userId: string; dateKey: string }
   | { type: 'saveCustomWorkout'; workout: CustomWorkout }
-  | { type: 'deleteCustomWorkout'; id: string };
+  | { type: 'deleteCustomWorkout'; id: string }
+  | { type: 'startPlan'; record: TrainingPlanRecord }
+  | { type: 'cancelPlan'; userId: string };
 
 const initial: State = {
   users: load<User[]>('users', []),
@@ -53,6 +56,7 @@ const initial: State = {
   sleepLogs: load<SleepLog[]>('sleepLogs', []),
   overrides: load<DayOverride[]>('overrides', []),
   customWorkouts: load<CustomWorkout[]>('customWorkouts', []),
+  trainingPlans: load<TrainingPlanRecord[]>('trainingPlans', []),
 };
 
 export class AuthError extends Error {}
@@ -164,6 +168,14 @@ function reducer(state: State, action: Action): State {
     }
     case 'deleteCustomWorkout':
       return { ...state, customWorkouts: state.customWorkouts.filter((w) => w.id !== action.id) };
+    case 'startPlan':
+      // one active plan per user — replace any existing record for them
+      return {
+        ...state,
+        trainingPlans: [...state.trainingPlans.filter((p) => p.userId !== action.record.userId), action.record],
+      };
+    case 'cancelPlan':
+      return { ...state, trainingPlans: state.trainingPlans.filter((p) => p.userId !== action.userId) };
     default:
       return state;
   }
@@ -177,6 +189,7 @@ interface Store extends State {
   userSleepLogs: SleepLog[];
   userOverrides: DayOverride[];
   userCustomWorkouts: CustomWorkout[];
+  userActivePlan: TrainingPlanRecord | null;
   dispatch: React.Dispatch<Action>;
 }
 
@@ -192,6 +205,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => save('sleepLogs', state.sleepLogs), [state.sleepLogs]);
   useEffect(() => save('overrides', state.overrides), [state.overrides]);
   useEffect(() => save('customWorkouts', state.customWorkouts), [state.customWorkouts]);
+  useEffect(() => save('trainingPlans', state.trainingPlans), [state.trainingPlans]);
 
   const store = useMemo<Store>(() => {
     const user = state.users.find((u) => u.id === state.sessionUserId) ?? null;
@@ -205,7 +219,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const userSleepLogs = user ? state.sleepLogs.filter((s) => s.userId === user.id) : [];
     const userOverrides = user ? state.overrides.filter((o) => o.userId === user.id) : [];
     const userCustomWorkouts = user ? state.customWorkouts.filter((w) => w.userId === user.id) : [];
-    return { ...state, user, userPatterns, activePattern, userWorkouts, userSleepLogs, userOverrides, userCustomWorkouts, dispatch };
+    const userActivePlan = user ? state.trainingPlans.find((p) => p.userId === user.id) ?? null : null;
+    return { ...state, user, userPatterns, activePattern, userWorkouts, userSleepLogs, userOverrides, userCustomWorkouts, userActivePlan, dispatch };
   }, [state]);
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;

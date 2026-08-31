@@ -357,7 +357,7 @@ export default function Tracker({
 
     return (
       <div className="min-h-dvh bg-bg-base text-fg-primary flex flex-col">
-        <header className="sticky top-0 z-10 bg-bg-base/95 backdrop-blur border-b border-line-subtle">
+        <header className="sticky top-0 z-10 bg-bg-base/95 backdrop-blur border-b border-line-subtle" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <div className="mx-auto max-w-md px-5 pt-4 pb-3">
             <div className="flex items-center justify-between">
               <button onClick={exit} className="flex items-center gap-1 text-[14px] text-fg-secondary font-semibold">
@@ -459,7 +459,7 @@ export default function Tracker({
   return (
     <div className="min-h-dvh bg-bg-base text-fg-primary flex flex-col">
       {/* header stats */}
-      <header className="sticky top-0 z-10 bg-bg-base/95 backdrop-blur border-b border-line-subtle">
+      <header className="sticky top-0 z-10 bg-bg-base/95 backdrop-blur border-b border-line-subtle" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="mx-auto max-w-md px-4 pt-3 pb-3">
           <div className="flex items-center justify-between mb-3">
             <button onClick={exit} className="flex items-center gap-1 text-[14px] text-fg-secondary font-semibold">
