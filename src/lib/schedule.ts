@@ -214,6 +214,18 @@ export function recommendationFor(fatigue: number): Recommendation {
   return 'rest';
 }
 
+// ── Safety overrides ────────────────────────────────────────────────
+// These run AFTER the score-based recommendation above and never touch
+// the point values — they only cap or override the final recommendation.
+const RECO_ORDER: Recommendation[] = ['rest', 'light', 'moderate', 'hard'];
+
+/** Long shifts cap the ceiling regardless of how low the computed score is. */
+function shiftLengthCap(lengthHours: number): Recommendation | null {
+  if (lengthHours >= 12) return 'light';
+  if (lengthHours >= 8) return 'moderate';
+  return null;
+}
+
 /**
  * Build day plans for [from, to] with fatigue scored from schedule
  * context (look-back included so history affects the first visible day).
@@ -355,6 +367,22 @@ export function buildDayPlans(
       recommendation = 'light';
       reasons.push('You marked this day off — keep it easy');
     }
+
+    // shift-length safety cap — bring the recommendation down, never up
+    if (shift) {
+      const cap = shiftLengthCap(shift.lengthHours);
+      if (cap && RECO_ORDER.indexOf(recommendation) > RECO_ORDER.indexOf(cap)) {
+        recommendation = cap;
+        reasons.unshift(`${Math.round(shift.lengthHours)}h shift — capping at ${cap}`);
+      }
+    }
+
+    // sleep hard floor — poor sleep forces rest regardless of every other factor
+    if (sleepMap.get(dateKey(date)) === 'poor') {
+      recommendation = 'rest';
+      reasons.unshift('Poor sleep — recommending rest regardless of other factors.');
+    }
+
     plans.push({
       date,
       dateKey: dateKey(date),
