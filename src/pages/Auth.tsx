@@ -28,7 +28,10 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-dvh bg-bg-base text-fg-primary flex flex-col items-center justify-center px-6">
+    <div
+      className="min-h-dvh bg-bg-base text-fg-primary flex flex-col items-center justify-center px-6"
+      style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center text-center mb-8">
           <Logo size="xl" />

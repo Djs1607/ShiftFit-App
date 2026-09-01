@@ -290,7 +290,10 @@ export default function Tracker({
   // ── completion summary ────────────────────────────────────────────
   if (summary) {
     return (
-      <div className="min-h-dvh bg-bg-base text-fg-primary flex flex-col items-center justify-center px-6">
+      <div
+        className="min-h-dvh bg-bg-base text-fg-primary flex flex-col items-center justify-center px-6"
+        style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
         <div className="w-full max-w-sm text-center">
           <div className="mx-auto h-20 w-20 rounded-full bg-action-accent flex items-center justify-center mb-5 shadow-glow-accent">
             <Check className="h-9 w-9 text-fg-onAccent" strokeWidth={3} />

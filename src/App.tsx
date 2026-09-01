@@ -83,7 +83,10 @@ function Shell() {
       />
 
       {/* content */}
-      <main className="flex-1 mx-auto w-full max-w-md px-5 pt-5 pb-28">
+      <main
+        className="flex-1 mx-auto w-full max-w-md px-5 pt-5"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 80px)' }}
+      >
         {tab === 'today' && <Today go={setTab} onStart={setTrackingId} />}
         {tab === 'shifts' && <Patterns />}
         {tab === 'workouts' && <Workouts go={setTab} onStart={setTrackingId} />}

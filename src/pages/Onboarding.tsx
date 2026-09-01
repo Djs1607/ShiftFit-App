@@ -25,7 +25,10 @@ export default function Onboarding({ onDone }: { onDone: (tab?: 'today' | 'shift
   };
 
   return (
-    <div className="min-h-dvh bg-bg-base text-fg-primary flex flex-col">
+    <div
+      className="min-h-dvh bg-bg-base text-fg-primary flex flex-col"
+      style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
       {/* progress dots + skip */}
       <div className="flex items-center justify-between px-5 pt-5 max-w-md mx-auto w-full">
         <div className="flex gap-1.5">
