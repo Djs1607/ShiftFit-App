@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { LogOut, Check, RotateCcw, ChevronRight } from 'lucide-react';
 import { useStore } from '../lib/store';
+import { InstallInstructions, useIsStandalone } from '../components/InstallInstructions';
 import { Button, Card, Input } from '../components/ds';
 import type { Tab } from '../App';
 
@@ -8,6 +9,7 @@ export default function Profile({ go }: { go: (t: Tab) => void }) {
   const { user, userPatterns, activePattern, dispatch } = useStore();
   const [name, setName] = useState(user?.name ?? '');
   const [savedName, setSavedName] = useState(false);
+  const installed = useIsStandalone();
 
   if (!user) return null;
 
@@ -52,6 +54,22 @@ export default function Profile({ go }: { go: (t: Tab) => void }) {
           </span>
           <ChevronRight className="h-5 w-5 text-fg-tertiary shrink-0" />
         </button>
+      </Card>
+
+      <Card tone="default" padding="lg" className="space-y-3">
+        <h2 className="text-[15px] font-semibold text-fg-primary">Install app</h2>
+        {installed ? (
+          <p className="flex items-center gap-1.5 text-[14px] font-medium text-feedback-success">
+            <Check className="h-4 w-4" /> App installed
+          </p>
+        ) : (
+          <>
+            <p className="text-[13px] text-fg-tertiary">
+              Add ShiftFit to your home screen for the full app experience — full screen, no browser bar, opens instantly.
+            </p>
+            <InstallInstructions />
+          </>
+        )}
       </Card>
 
       <Button

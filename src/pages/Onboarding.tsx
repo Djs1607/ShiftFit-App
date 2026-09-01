@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ChevronRight, ChevronLeft, Check, Sunrise, Zap, Timer, SkipForward } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Check, Sunrise, Zap, Timer, SkipForward, Download } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { PRESETS, patternFromPreset, type ShiftPreset } from '../lib/presets';
 import { dateKey, fmtDayLabel, parseDateKey } from '../lib/schedule';
 import Logo from '../components/Logo';
+import { InstallInstructions } from '../components/InstallInstructions';
 import { Button, Card, Input } from '../components/ds';
 
 /**
@@ -32,7 +33,7 @@ export default function Onboarding({ onDone }: { onDone: (tab?: 'today' | 'shift
       {/* progress dots + skip */}
       <div className="flex items-center justify-between px-5 pt-5 max-w-md mx-auto w-full">
         <div className="flex gap-1.5">
-          {[0, 1, 2].map((i) => (
+          {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
               className={`h-1.5 rounded-pill transition-all duration-base ease-standard ${
@@ -154,9 +155,37 @@ export default function Onboarding({ onDone }: { onDone: (tab?: 'today' | 'shift
                 </div>
               ))}
             </div>
-            <Button variant="primary" size="lg" fullWidth onClick={() => onDone()}>
+            <Button variant="primary" size="lg" fullWidth onClick={() => setStep(3)}>
               Start using ShiftFit
             </Button>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-6">
+            <div className="flex justify-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-action-primary-quiet">
+                <Download className="h-6 w-6 text-coral-300" />
+              </div>
+            </div>
+            <div className="space-y-1 text-center">
+              <h1 className="font-display text-[28px] font-semibold leading-tight tracking-[-0.02em] text-fg-primary">Install ShiftFit</h1>
+              <p className="text-fg-secondary text-[15px]">
+                Add it to your home screen for the full app experience — full screen, no browser bar, opens instantly.
+              </p>
+            </div>
+            <Card tone="raised" padding="md" className="text-left">
+              <InstallInstructions />
+            </Card>
+            <Button variant="primary" size="lg" fullWidth onClick={() => onDone()}>
+              Got it
+            </Button>
+            <button
+              onClick={() => onDone()}
+              className="mx-auto block text-[13px] text-fg-tertiary"
+            >
+              Skip for now
+            </button>
           </div>
         )}
       </div>
