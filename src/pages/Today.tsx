@@ -129,7 +129,7 @@ export default function Today({ go, onStart }: { go: (t: Tab) => void; onStart: 
           planId = activeTrainingPlan.id;
           planNote = `${activeTrainingPlan.name} · Week ${week}, session ${sessionIndex + 1} of ${activeTrainingPlan.sessionsPerWeek}`;
         } else {
-          planNote = `${activeTrainingPlan.name} — swapped for today's lower fatigue budget`;
+          planNote = `${activeTrainingPlan.name} · swapped for today's lower fatigue budget`;
         }
       }
     }

@@ -202,7 +202,7 @@ export default function Progress() {
         {(selectedDay ? selectedDayWorkouts : completed).length === 0 ? (
           <p className="text-[14px] text-fg-tertiary flex items-center gap-2">
             <Dumbbell className="h-4 w-4" />
-            {selectedDay ? 'No workouts logged on this day.' : 'Nothing logged yet — start a workout from the Workouts tab.'}
+            {selectedDay ? 'No workouts logged on this day.' : 'Nothing logged yet. Start a workout from the Workouts tab.'}
           </p>
         ) : (
           <ul className="divide-y divide-line-subtle">

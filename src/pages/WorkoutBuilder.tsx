@@ -103,7 +103,7 @@ export default function WorkoutBuilder({
       {/* exercise list editor */}
       <div>
         <p className="text-[12px] font-semibold uppercase tracking-[0.06em] text-fg-tertiary mb-2">
-          Exercises — {exercises.length}
+          Exercises: {exercises.length}
         </p>
         <ul className="space-y-2">
           {exercises.map((ex, i) => (

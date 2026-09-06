@@ -35,7 +35,7 @@ export function getInstallContent(platform: InstallPlatform): InstallContent {
       };
     case 'ios-other':
       return {
-        message: "Open this page in Safari to install — other iOS browsers can't add apps to your home screen.",
+        message: "Open this page in Safari to install: other iOS browsers can't add apps to your home screen.",
       };
     case 'android':
       return {
@@ -47,7 +47,7 @@ export function getInstallContent(platform: InstallPlatform): InstallContent {
       };
     default:
       return {
-        message: "You're on desktop right now — you can install this later from your phone. Find it anytime in Profile.",
+        message: "You're on desktop right now. You can install this later from your phone, and find it anytime in Profile.",
       };
   }
 }

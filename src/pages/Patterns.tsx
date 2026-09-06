@@ -151,7 +151,7 @@ function Builder({
 
   const save = () => {
     if (!name.trim()) { setError('Give the pattern a name.'); return; }
-    if (!startDate) { setError('Pick a start date — it anchors day 1 of the cycle to the calendar.'); return; }
+    if (!startDate) { setError('Pick a start date: it anchors day 1 of the cycle to the calendar.'); return; }
     const pattern: ShiftPattern = {
       id: existing?.id ?? uid(),
       userId,
@@ -205,7 +205,7 @@ function Builder({
       <div>
         <div className="flex items-center justify-between mb-2">
           <p className="text-[12px] font-semibold uppercase tracking-[0.06em] text-fg-tertiary">
-            Rotation cycle — {days.length} days ({onCount} on)
+            Rotation cycle: {days.length} days ({onCount} on)
           </p>
           <div className="flex gap-1.5">
             <button onClick={removeDay} className="h-8 w-8 rounded-control bg-surface-raised text-fg-body font-bold hover:bg-surface-press">−</button>
@@ -269,7 +269,7 @@ function Builder({
                     </div>
                     {overnight && (
                       <p className="mt-2 flex items-center gap-1.5 text-[13px] text-coral-300">
-                        <Moon className="h-3.5 w-3.5" /> Crosses midnight — ends next day
+                        <Moon className="h-3.5 w-3.5" /> Crosses midnight, ends next day
                       </p>
                     )}
                   </div>

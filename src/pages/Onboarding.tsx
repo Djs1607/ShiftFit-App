@@ -57,13 +57,13 @@ export default function Onboarding({ onDone }: { onDone: (tab?: 'today' | 'shift
               <Logo size="xl" />
             </div>
             <p className="text-fg-secondary text-[17px] leading-snug">
-              Workouts that fit around your shifts — not the other way round.
+              Workouts that fit around your shifts, not the other way round.
             </p>
             <Card tone="raised" padding="md" className="text-left">
               <p className="text-[14px] text-fg-secondary leading-relaxed">
                 ShiftFit reads your rotation, scores your daily fatigue, and tells you{' '}
                 <span className="text-fg-primary font-medium">when</span> to train and{' '}
-                <span className="text-fg-primary font-medium">how hard</span> — so you never plan a heavy
+                <span className="text-fg-primary font-medium">how hard</span>, so you never plan a heavy
                 session after a night shift again.
               </p>
             </Card>
@@ -78,7 +78,7 @@ export default function Onboarding({ onDone }: { onDone: (tab?: 'today' | 'shift
             <div className="space-y-1">
               <h1 className="font-display text-[28px] font-semibold leading-tight tracking-[-0.02em] text-fg-primary">What's your rotation?</h1>
               <p className="text-fg-secondary text-[15px]">
-                Tap one — you're set. You can edit times or build your own any time from your Profile.
+                Tap one, you're set. You can edit times or build your own any time from your Profile.
               </p>
             </div>
             <Input
@@ -108,7 +108,7 @@ export default function Onboarding({ onDone }: { onDone: (tab?: 'today' | 'shift
               onClick={() => onDone('shifts')}
               className="w-full rounded-control border border-dashed border-line-strong py-3 text-[13px] text-fg-secondary"
             >
-              None of these — set up my own pattern
+              None of these, set up my own pattern
             </button>
             <button onClick={() => setStep(0)} className="flex items-center gap-1 text-[13px] text-fg-tertiary mx-auto">
               <ChevronLeft className="h-4 w-4" /> Back
@@ -122,7 +122,7 @@ export default function Onboarding({ onDone }: { onDone: (tab?: 'today' | 'shift
               intro={
                 picked && (
                   <div className="flex items-center gap-2 rounded-control bg-action-primary-quiet text-coral-300 px-4 py-2.5 text-[14px] font-medium">
-                    <Check className="h-4 w-4" /> {picked} — day 1 is {fmtDayLabel(parseDateKey(startDate))}
+                    <Check className="h-4 w-4" /> {picked} · day 1 is {fmtDayLabel(parseDateKey(startDate))}
                   </div>
                 )
               }
@@ -143,7 +143,7 @@ export default function Onboarding({ onDone }: { onDone: (tab?: 'today' | 'shift
             <div className="space-y-1 text-center">
               <h1 className="font-display text-[28px] font-semibold leading-tight tracking-[-0.02em] text-fg-primary">Install ShiftFit</h1>
               <p className="text-fg-secondary text-[15px]">
-                Add it to your home screen for the full app experience — full screen, no browser bar, opens instantly.
+                Add it to your home screen for the full app experience: full screen, no browser bar, opens instantly.
               </p>
             </div>
             <Card tone="raised" padding="md" className="text-left">

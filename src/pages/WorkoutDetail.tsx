@@ -113,7 +113,7 @@ export default function WorkoutDetail({
       <Card tone="inset" padding="md">
         <dl className="flex items-center justify-around text-center">
           {[
-            { icon: ListChecks, value: plan.length || '—', label: plan.length === 1 ? 'Exercise' : 'Exercises' },
+            { icon: ListChecks, value: plan.length || '–', label: plan.length === 1 ? 'Exercise' : 'Exercises' },
             { icon: Clock, value: workout.durationMin, label: 'Minutes' },
             { icon: Flame, value: `~${estimateCal(workout.durationMin, workout.intensity)}`, label: 'Est. kcal' },
           ].map(({ icon: Icon, value, label }) => (
@@ -134,7 +134,7 @@ export default function WorkoutDetail({
             {dayPlan && ` (fatigue ${dayPlan.fatigue})`}. This is a {REC_META[workout.level].label.toLowerCase()} session.
           </p>
           <p className="mt-1.5 text-[13px] text-fg-secondary">
-            You can still do it — just know you're going against the rotation.
+            You can still do it, just know you're going against the rotation.
           </p>
         </div>
       )}
@@ -162,7 +162,7 @@ export default function WorkoutDetail({
         </section>
       ) : (
         <p className="rounded-control border border-dashed border-line-strong px-4 py-3.5 text-[13px] text-fg-tertiary">
-          No exercise breakdown for this one — it's a single continuous effort. Start it and the timer runs.
+          No exercise breakdown for this one: it's a single continuous effort. Start it and the timer runs.
         </p>
       )}
 
@@ -186,7 +186,7 @@ export default function WorkoutDetail({
             </div>
 
             <p className="text-[13px] text-fg-tertiary">
-              {workout.type} · {workout.durationMin} min · <span className="capitalize">{workout.intensity}</span> — finishes {fmtTime(end)}
+              {workout.type} · {workout.durationMin} min · <span className="capitalize">{workout.intensity}</span> · finishes {fmtTime(end)}
             </p>
 
             {conflict && (
@@ -197,13 +197,13 @@ export default function WorkoutDetail({
                 </p>
                 <label className="mt-2.5 flex cursor-pointer items-center gap-2.5 text-[12px] text-fg-body">
                   <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} className="h-4 w-4 accent-feedback-danger" />
-                  I know — schedule it anyway
+                  I know, schedule it anyway
                 </label>
               </div>
             )}
 
             <Button type="submit" variant="primary" size="lg" fullWidth disabled={!!conflict && !override}>
-              {conflict && !override ? 'Blocked — overlaps a shift' : saved ? 'Scheduled ✓' : 'Add to my plan'}
+              {conflict && !override ? 'Blocked: overlaps a shift' : saved ? 'Scheduled ✓' : 'Add to my plan'}
             </Button>
           </form>
         </Card>

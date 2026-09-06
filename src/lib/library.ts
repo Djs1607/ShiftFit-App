@@ -44,10 +44,10 @@ export const WORKOUT_LIBRARY: LibraryWorkout[] = [
     { name: 'Pigeon Pose each side (reps = breaths)', sets: 2, reps: 6 },
     { name: 'Child’s Pose (reps = breaths)', sets: 1, reps: 10 },
   ] },
-  { id: 'zone1-spin', name: 'Zone 1 spin', type: 'Cycle', durationMin: 30, intensity: 'light', level: 'light', blurb: 'Very easy pedalling — you should be able to chat the whole time.' },
+  { id: 'zone1-spin', name: 'Zone 1 spin', type: 'Cycle', durationMin: 30, intensity: 'light', level: 'light', blurb: 'Very easy pedalling. You should be able to chat the whole time.' },
   // moderate
-  { id: 'tempo-run', name: 'Tempo run', type: 'Run', durationMin: 35, intensity: 'moderate', level: 'moderate', blurb: 'Comfortably hard — a few sentences at a time, not full chat.' },
-  { id: 'full-body-moderate', name: 'Full-body strength', type: 'Strength', durationMin: 45, intensity: 'moderate', level: 'moderate', blurb: 'Squat, push, pull, hinge — 3 sets each, leaving 2 reps in the tank.', plan: [
+  { id: 'tempo-run', name: 'Tempo run', type: 'Run', durationMin: 35, intensity: 'moderate', level: 'moderate', blurb: 'Comfortably hard: a few sentences at a time, not full chat.' },
+  { id: 'full-body-moderate', name: 'Full-body strength', type: 'Strength', durationMin: 45, intensity: 'moderate', level: 'moderate', blurb: 'Squat, push, pull, hinge: 3 sets each, leaving 2 reps in the tank.', plan: [
     { name: 'Goblet Squat', sets: 3, reps: 10 },
     { name: 'Push-up', sets: 3, reps: 12 },
     { name: 'Dumbbell Row', sets: 3, reps: 10 },

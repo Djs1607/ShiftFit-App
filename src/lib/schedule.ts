@@ -365,7 +365,7 @@ export function buildDayPlans(
     // a day the user explicitly marked off (sick/called off) never prescribes hard work
     if (ovMap.get(dateKey(date))?.kind === 'off' && (recommendation === 'moderate' || recommendation === 'hard')) {
       recommendation = 'light';
-      reasons.push('You marked this day off — keep it easy');
+      reasons.push('You marked this day off, keep it easy');
     }
 
     // shift-length safety cap — bring the recommendation down, never up
@@ -373,14 +373,14 @@ export function buildDayPlans(
       const cap = shiftLengthCap(shift.lengthHours);
       if (cap && RECO_ORDER.indexOf(recommendation) > RECO_ORDER.indexOf(cap)) {
         recommendation = cap;
-        reasons.unshift(`${Math.round(shift.lengthHours)}h shift — capping at ${cap}`);
+        reasons.unshift(`${Math.round(shift.lengthHours)}h shift, capping at ${cap}`);
       }
     }
 
     // sleep hard floor — poor sleep forces rest regardless of every other factor
     if (sleepMap.get(dateKey(date)) === 'poor') {
       recommendation = 'rest';
-      reasons.unshift('Poor sleep — recommending rest regardless of other factors.');
+      reasons.unshift('Poor sleep: recommending rest regardless of other factors.');
     }
 
     plans.push({

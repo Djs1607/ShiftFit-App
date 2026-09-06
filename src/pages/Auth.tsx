@@ -79,7 +79,7 @@ export default function Auth() {
         </form>
 
         <p className="text-fg-disabled text-[13px] mt-8 text-center leading-relaxed">
-          Local-only MVP: your account and data live in this browser's storage — nothing is sent to a server.
+          Local-only MVP: your account and data live in this browser's storage. Nothing is sent to a server.
         </p>
       </div>
     </div>

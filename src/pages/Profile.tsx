@@ -67,7 +67,7 @@ export default function Profile({ go }: { go: (t: Tab) => void }) {
         ) : (
           <>
             <p className="text-[13px] text-fg-tertiary">
-              Add ShiftFit to your home screen for the full app experience — full screen, no browser bar, opens instantly.
+              Add ShiftFit to your home screen for the full app experience: full screen, no browser bar, opens instantly.
             </p>
             <InstallInstructions />
           </>

@@ -76,7 +76,7 @@ function RestRing({
           <p className="text-[12px] font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-1.5">
             <Timer className="h-3.5 w-3.5" /> Resting
           </p>
-          <p className="text-[14px] text-fg-secondary mb-3 leading-snug">Next set unlocks when the ring empties — or skip whenever you're ready.</p>
+          <p className="text-[14px] text-fg-secondary mb-3 leading-snug">Next set unlocks when the ring empties, or skip whenever you're ready.</p>
           <div className="flex items-center gap-2">
             <button onClick={() => onAdjust(-15000)} className="flex-1 rounded-control bg-surface-inset py-2 text-[12px] font-bold text-fg-body hover:bg-surface-hover">−15s</button>
             <button onClick={() => onAdjust(15000)} className="flex-1 rounded-control bg-surface-inset py-2 text-[12px] font-bold text-fg-body hover:bg-surface-hover">+15s</button>
@@ -520,7 +520,7 @@ export default function Tracker({
         <div className="fixed bottom-0 inset-x-0 z-10 bg-bg-base/95 backdrop-blur border-t border-line-subtle pb-[env(safe-area-inset-bottom)]">
           <div className="mx-auto max-w-md px-5 py-3">
             <Button variant="accent" size="lg" fullWidth icon={Flag} onClick={finish}>
-              {finished0 ? 'Log it — done!' : 'Finish early'}
+              {finished0 ? 'Log it, done!' : 'Finish early'}
             </Button>
           </div>
         </div>
@@ -562,7 +562,7 @@ export default function Tracker({
         {exercises.length === 0 && (
           <div className="rounded-sheet border border-dashed border-line-subtle py-10 text-center">
             <Dumbbell className="h-6 w-6 text-fg-disabled mx-auto mb-2" />
-            <p className="text-[14px] text-fg-tertiary">No exercises yet — add your first one below.</p>
+            <p className="text-[14px] text-fg-tertiary">No exercises yet. Add your first one below.</p>
           </div>
         )}
 

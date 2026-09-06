@@ -11,7 +11,7 @@ export interface ShiftPreset {
 // ── Common rotations for one-tap setup ──────────────────────────────
 export const PRESETS: ShiftPreset[] = [
   {
-    name: '4 on / 4 off — days 12h',
+    name: '4 on / 4 off, days 12h',
     blurb: 'Four day shifts, four days off',
     days: [
       { isOnShift: true, startTime: '06:00', endTime: '18:00' },
@@ -22,7 +22,7 @@ export const PRESETS: ShiftPreset[] = [
     ],
   },
   {
-    name: '4 on / 4 off — nights 12h',
+    name: '4 on / 4 off, nights 12h',
     blurb: 'Four night shifts, four days off',
     days: [
       { isOnShift: true, startTime: '18:00', endTime: '06:00' },
@@ -56,7 +56,7 @@ export const PRESETS: ShiftPreset[] = [
     ],
   },
   {
-    name: '6 on / 3 off — days 8h',
+    name: '6 on / 3 off, days 8h',
     blurb: 'Six day shifts, three days off',
     days: [
       { isOnShift: true, startTime: '08:00', endTime: '16:00' },
@@ -69,7 +69,7 @@ export const PRESETS: ShiftPreset[] = [
     ],
   },
   {
-    name: '2-2-3 Panama — days 12h',
+    name: '2-2-3 Panama, days 12h',
     blurb: 'Alternating 2 and 3 on, every other weekend off',
     days: [
       { isOnShift: true, startTime: '07:00', endTime: '19:00' },

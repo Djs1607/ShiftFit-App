@@ -48,7 +48,7 @@ export const PLANS: TrainingPlan[] = [
     weeks: 4,
     sessionsPerWeek: 3,
     frequencyLabel: '3 runs per week',
-    description: 'Builds aerobic base with three easy-paced runs a week — no speed work required.',
+    description: 'Builds aerobic base with three easy-paced runs a week. No speed work required.',
     icon: Activity,
     sessionTemplate: ['tempo-run', 'tempo-run', 'tempo-run'],
   },
