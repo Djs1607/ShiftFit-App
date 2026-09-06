@@ -27,6 +27,7 @@ export default function Progress() {
   const now = new Date();
   const [calYear, setCalYear] = useState(now.getFullYear());
   const [calMonth, setCalMonth] = useState(now.getMonth()); // 0-based
+  const [selectedDay, setSelectedDay] = useState<string | null>(null); // dateKey, or null = default recent list
 
   const completed = useMemo(
     () => userWorkouts.filter((w) => w.completed).sort((a, b) => b.datetime.localeCompare(a.datetime)),
@@ -88,7 +89,16 @@ export default function Progress() {
     const d = new Date(calYear, calMonth + delta, 1);
     setCalYear(d.getFullYear());
     setCalMonth(d.getMonth());
+    setSelectedDay(null);
   };
+
+  const selectDay = (key: string) => setSelectedDay((cur) => (cur === key ? null : key));
+
+  // workouts completed on the selected calendar day, most recent first
+  const selectedDayWorkouts = useMemo(
+    () => (selectedDay ? completed.filter((w) => w.datetime.slice(0, 10) === selectedDay) : []),
+    [completed, selectedDay]
+  );
 
   const monthLabel = new Date(calYear, calMonth, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
   const firstWeekday = new Date(calYear, calMonth, 1).getDay(); // 0 = Sunday
@@ -127,7 +137,7 @@ export default function Progress() {
           <p className="text-[15px] font-semibold text-fg-primary">{monthLabel}</p>
           <div className="flex items-center gap-1">
             {!isCurrentMonth && (
-              <button onClick={() => { setCalYear(now.getFullYear()); setCalMonth(now.getMonth()); }}
+              <button onClick={() => { setCalYear(now.getFullYear()); setCalMonth(now.getMonth()); setSelectedDay(null); }}
                 className="text-[12px] font-semibold text-coral-300 px-2 py-1">Today</button>
             )}
             <IconButton icon={ChevronRight} label="Next month" onClick={() => shiftMonth(1)} />
@@ -144,17 +154,24 @@ export default function Progress() {
             const trained = trainedDays.has(day);
             const rested = !trained && restWins.has(key);
             const isToday = key === todayKey;
+            const isSelected = key === selectedDay;
             return (
-              <span key={day} className="flex flex-col items-center py-1">
-                <span className={`h-8 w-8 flex items-center justify-center rounded-full text-[14px] font-medium ${
-                  isToday ? 'ring-1 ring-coral-400/60 text-coral-300' : trained ? 'text-fg-primary' : 'text-fg-tertiary'
+              <button key={day} onClick={() => selectDay(key)} className="flex flex-col items-center py-1">
+                <span className={`h-8 w-8 flex items-center justify-center rounded-full text-[14px] font-medium transition-colors duration-fast ease-standard ${
+                  isSelected
+                    ? 'bg-action-accent text-fg-onAccent'
+                    : isToday
+                    ? 'ring-1 ring-coral-400/60 text-coral-300'
+                    : trained
+                    ? 'text-fg-primary'
+                    : 'text-fg-tertiary'
                 }`}>
                   {day}
                 </span>
                 <span className={`mt-0.5 h-1.5 w-1.5 rounded-full ${
                   trained ? 'bg-action-accent' : rested ? 'bg-coral-400' : 'bg-transparent'
                 }`} />
-              </span>
+              </button>
             );
           })}
         </div>
@@ -168,16 +185,28 @@ export default function Progress() {
         </div>
       </Card>
 
-      {/* recent sessions */}
+      {/* recent sessions — or, when a calendar day is selected, just that day's */}
       <Card tone="default" padding="lg">
-        <h2 className="text-[15px] font-semibold text-fg-primary mb-3">Recent sessions</h2>
-        {completed.length === 0 ? (
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-[15px] font-semibold text-fg-primary">
+            {selectedDay
+              ? parseDateKey(selectedDay).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })
+              : 'Recent sessions'}
+          </h2>
+          {selectedDay && (
+            <button onClick={() => setSelectedDay(null)} className="text-[12px] font-semibold text-coral-300 px-2 py-1">
+              Show recent
+            </button>
+          )}
+        </div>
+        {(selectedDay ? selectedDayWorkouts : completed).length === 0 ? (
           <p className="text-[14px] text-fg-tertiary flex items-center gap-2">
-            <Dumbbell className="h-4 w-4" /> Nothing logged yet — start a workout from the Workouts tab.
+            <Dumbbell className="h-4 w-4" />
+            {selectedDay ? 'No workouts logged on this day.' : 'Nothing logged yet — start a workout from the Workouts tab.'}
           </p>
         ) : (
           <ul className="divide-y divide-line-subtle">
-            {completed.slice(0, 8).map((w) => {
+            {(selectedDay ? selectedDayWorkouts : completed.slice(0, 8)).map((w) => {
               const d = parseDateKey(w.datetime.slice(0, 10));
               const vol = volumeOf(w);
               return (
