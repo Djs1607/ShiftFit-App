@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Plus, Check, Trash2, Timer, Flag, Play, Pause, RotateCcw, Dumbbell, ChevronRight, ChevronLeft } from 'lucide-react';
+import { X, Plus, Check, Trash2, Timer, Flag, Play, Pause, RotateCcw, Dumbbell, ChevronRight, ChevronLeft, SlidersHorizontal } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { uid } from '../lib/storage';
 import { localISO } from '../lib/schedule';
 import { WORKOUT_LIBRARY } from '../lib/library';
-import { Button, MetricTile } from '../components/ds';
+import { Button, ConfirmSheet, MetricTile, Stepper } from '../components/ds';
 import type { Workout, WorkoutExercise } from '../lib/types';
 
 const REST_OPTIONS = [30, 60, 90, 120, 180];
@@ -88,6 +88,53 @@ function RestRing({
   );
 }
 
+// ── customise-exercise sheet ────────────────────────────────────────
+// Set-count editor for the active exercise. Same shell as ConfirmSheet
+// (backdrop, slide-up panel, escape-to-close) — content differs so it's
+// its own component rather than reusing ConfirmSheet directly.
+function CustomizeExerciseSheet({
+  open, exName, value, min, max, onChange, onClose,
+}: {
+  open: boolean;
+  exName: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-end justify-center sm:items-center">
+      <div className="absolute inset-0 bg-bg-scrim" onClick={onClose} aria-hidden />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="customize-sheet-title"
+        className="relative w-full max-w-md rounded-t-sheet border border-line-subtle bg-surface-card p-5
+          pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-sheet duration-sheet ease-out
+          animate-in slide-in-from-bottom sm:rounded-card sm:pb-5"
+      >
+        <p id="customize-sheet-title" className="font-display text-[17px] font-semibold leading-snug text-fg-primary">
+          {exName}
+        </p>
+        <Stepper value={value} min={min} max={max} unit="sets" onChange={onChange} className="mt-4" />
+        <div className="mt-5">
+          <Button variant="primary" size="lg" fullWidth onClick={onClose}>Done</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Tracker({
   workoutId, onExit, onFinished,
 }: { workoutId: string; onExit: () => void; onFinished: () => void }) {
@@ -100,6 +147,8 @@ export default function Tracker({
   const [newEx, setNewEx] = useState('');
   const [summary, setSummary] = useState<{ min: number; volume: number; sets: number; goal?: number } | null>(null);
   const [currentExIdx, setCurrentExIdx] = useState(0);
+  const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [pendingAdvance, setPendingAdvance] = useState(false);
   const beepedFor = useRef<number | null>(null);
   const restDurationRef = useRef(90);
 
@@ -121,14 +170,23 @@ export default function Tracker({
     return () => clearInterval(t);
   }, []);
 
-  // rest-timer completion beep
+  // rest-timer completion: beep, then move on to the next exercise if it's
+  // now fully done (this is the only path that auto-advances silently —
+  // it means the user was already sitting through a rest countdown)
   useEffect(() => {
     if (restEnd && now >= restEnd && beepedFor.current !== restEnd) {
       beepedFor.current = restEnd;
       beep();
       setRestEnd(null);
+      const exs = workout?.exercises ?? [];
+      const idx = Math.min(currentExIdx, Math.max(0, exs.length - 1));
+      const ex = exs[idx];
+      const done = ex ? ex.sets.filter((s) => s.done).length : 0;
+      if (ex && ex.sets.length > 0 && done === ex.sets.length && idx < exs.length - 1) {
+        setCurrentExIdx(idx + 1);
+      }
     }
-  }, [now, restEnd]);
+  }, [now, restEnd, workout, currentExIdx]);
 
   // cardio countdown completion
   useEffect(() => {
@@ -215,13 +273,19 @@ export default function Tracker({
   const currentDoneCount = currentEx ? currentEx.sets.filter((s) => s.done).length : 0;
   const currentTotalSets = currentEx ? currentEx.sets.length : 0;
 
-  // auto-advance to the next exercise once every set in this one is done
+  // exercise just became fully done with no rest timer running (rest already
+  // finished, was skipped, or sets were removed down to the completed count)
+  // → confirm before moving on, rather than silently jumping ahead.
+  // A running timer is handled by the rest-completion effect above instead.
   useEffect(() => {
-    if (currentTotalSets > 0 && currentDoneCount === currentTotalSets && safeExIdx < exercises.length - 1) {
-      const t = setTimeout(() => setCurrentExIdx(safeExIdx + 1), 500);
-      return () => clearTimeout(t);
+    if (currentTotalSets === 0 || currentDoneCount < currentTotalSets) {
+      setPendingAdvance(false);
+      return;
     }
-  }, [currentDoneCount, currentTotalSets, safeExIdx, exercises.length]);
+    if (restEnd === null && safeExIdx < exercises.length - 1) {
+      setPendingAdvance(true);
+    }
+  }, [currentDoneCount, currentTotalSets, restEnd, safeExIdx, exercises.length]);
 
   // if the workout vanished mid-session (deleted elsewhere), leave
   useEffect(() => {
@@ -262,6 +326,12 @@ export default function Tracker({
       exercises: exercises.map((e) =>
         e.id !== exId ? e : { ...e, sets: [...e.sets, { reps: last?.reps ?? 10, weightKg: last?.weightKg ?? 0, done: false }] }
       ),
+    });
+  };
+
+  const removeSet = (exId: string) => {
+    save({
+      exercises: exercises.map((e) => (e.id !== exId ? e : { ...e, sets: e.sets.slice(0, -1) })),
     });
   };
 
@@ -619,6 +689,15 @@ export default function Tracker({
             <Plus className="h-5 w-5" />
           </button>
         </div>
+
+        {currentEx && (
+          <button
+            onClick={() => setCustomizeOpen(true)}
+            className="w-full rounded-control border border-dashed border-line-strong py-2.5 text-[12px] font-semibold text-fg-tertiary hover:bg-surface-hover flex items-center justify-center gap-1.5"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" /> Customise exercise
+          </button>
+        )}
       </main>
 
       {/* bottom: rest presets (when not resting) + finish */}
@@ -643,6 +722,33 @@ export default function Tracker({
           </Button>
         </div>
       </div>
+
+      <CustomizeExerciseSheet
+        open={customizeOpen && !!currentEx}
+        exName={currentEx?.name ?? ''}
+        value={currentTotalSets}
+        min={currentDoneCount}
+        max={20}
+        onChange={(v) => {
+          if (!currentEx) return;
+          if (v > currentEx.sets.length) addSet(currentEx.id);
+          else if (v < currentEx.sets.length) removeSet(currentEx.id);
+        }}
+        onClose={() => setCustomizeOpen(false)}
+      />
+
+      <ConfirmSheet
+        open={pendingAdvance}
+        title="Move to next exercise?"
+        message={currentEx ? `You're all done with ${currentEx.name}.` : undefined}
+        confirmLabel="Next exercise"
+        danger={false}
+        onConfirm={() => {
+          setPendingAdvance(false);
+          setCurrentExIdx((i) => Math.min(exercises.length - 1, i + 1));
+        }}
+        onCancel={() => setPendingAdvance(false)}
+      />
     </div>
   );
 }
