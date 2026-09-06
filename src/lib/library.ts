@@ -29,7 +29,13 @@ export interface CustomWorkout extends LibraryWorkout {
 export const WORKOUT_LIBRARY: LibraryWorkout[] = [
   // rest-day friendly
   { id: 'walk-stretch', name: 'Walk & stretch', type: 'Walk', durationMin: 20, intensity: 'light', level: 'rest', blurb: 'Easy stroll + 5 min stretching. Keeps you loose without adding load.' },
-  { id: 'mobility-reset', name: '10-min mobility reset', type: 'Mobility', durationMin: 10, intensity: 'light', level: 'rest', blurb: 'Hips, shoulders, spine. Perfect after a night shift.' },
+  { id: 'mobility-reset', name: '10-min mobility reset', type: 'Mobility', durationMin: 10, intensity: 'light', level: 'rest', blurb: 'Hips, shoulders, spine. Perfect after a night shift.', plan: [
+    { name: 'Cat-Cow (reps = breaths)', sets: 1, reps: 8 },
+    { name: '90/90 Hip Switch (reps = breaths)', sets: 1, reps: 6 },
+    { name: 'Thread the Needle each side (reps = breaths)', sets: 1, reps: 5 },
+    { name: 'Shoulder Rolls (reps = breaths)', sets: 1, reps: 8 },
+    { name: 'Standing Forward Fold (reps = seconds)', sets: 1, reps: 30 },
+  ] },
   // light
   { id: 'recovery-walk', name: 'Recovery walk', type: 'Walk', durationMin: 30, intensity: 'light', level: 'light', blurb: 'Brisk but conversational pace. Great on tired legs.' },
   { id: 'yoga-flow', name: 'Easy yoga flow', type: 'Mobility', durationMin: 25, intensity: 'light', level: 'light', blurb: 'Slow flow to unwind tension and downshift before sleep.', plan: [
