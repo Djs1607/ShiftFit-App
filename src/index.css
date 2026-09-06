@@ -135,6 +135,10 @@
   html {
     -webkit-tap-highlight-color: transparent;
     scroll-behavior: smooth;
+    /* pan-x pan-y (not `manipulation`) — `manipulation` is shorthand for
+       pan + pinch-zoom minus double-tap, so it still allows pinch-zoom.
+       Omitting pinch-zoom from the allowed list is what actually blocks it. */
+    touch-action: pan-x pan-y;
   }
   body {
     font-feature-settings: 'cv11', 'ss01';
