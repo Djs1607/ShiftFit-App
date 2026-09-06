@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { LogOut, Check, RotateCcw, ChevronRight } from 'lucide-react';
+import { LogOut, Check, RotateCcw, ChevronRight, HelpCircle } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { InstallInstructions, useIsStandalone } from '../components/InstallInstructions';
+import { WalkthroughOverlay } from '../components/AppWalkthrough';
 import { Button, Card, Input } from '../components/ds';
 import type { Tab } from '../App';
 
@@ -9,6 +10,7 @@ export default function Profile({ go }: { go: (t: Tab) => void }) {
   const { user, userPatterns, activePattern, dispatch } = useStore();
   const [name, setName] = useState(user?.name ?? '');
   const [savedName, setSavedName] = useState(false);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
   const installed = useIsStandalone();
 
   if (!user) return null;
@@ -76,6 +78,16 @@ export default function Profile({ go }: { go: (t: Tab) => void }) {
         variant="secondary"
         size="lg"
         fullWidth
+        icon={HelpCircle}
+        onClick={() => setShowWalkthrough(true)}
+      >
+        How it works
+      </Button>
+
+      <Button
+        variant="secondary"
+        size="lg"
+        fullWidth
         icon={RotateCcw}
         onClick={() => window.dispatchEvent(new Event('shiftfit:replay-onboarding'))}
       >
@@ -96,6 +108,8 @@ export default function Profile({ go }: { go: (t: Tab) => void }) {
         Local-only MVP: your account, patterns and workouts are stored in this browser's localStorage.
         They won't sync to other devices, and clearing browser data removes them.
       </p>
+
+      {showWalkthrough && <WalkthroughOverlay onClose={() => setShowWalkthrough(false)} />}
     </div>
   );
 }

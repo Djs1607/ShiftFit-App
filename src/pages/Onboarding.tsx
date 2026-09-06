@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { ChevronRight, ChevronLeft, Check, Sunrise, Zap, Timer, SkipForward, Download } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Check, SkipForward, Download } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { PRESETS, patternFromPreset, type ShiftPreset } from '../lib/presets';
 import { dateKey, fmtDayLabel, parseDateKey } from '../lib/schedule';
 import Logo from '../components/Logo';
 import { InstallInstructions } from '../components/InstallInstructions';
+import { AppWalkthrough } from '../components/AppWalkthrough';
 import { Button, Card, Input } from '../components/ds';
 
 /**
@@ -117,44 +118,15 @@ export default function Onboarding({ onDone }: { onDone: (tab?: 'today' | 'shift
 
         {step === 2 && (
           <div className="space-y-6">
-            {picked && (
-              <div className="flex items-center gap-2 rounded-control bg-action-primary-quiet text-coral-300 px-4 py-2.5 text-[14px] font-medium">
-                <Check className="h-4 w-4" /> {picked} — day 1 is {fmtDayLabel(parseDateKey(startDate))}
-              </div>
-            )}
-            <div className="space-y-1">
-              <h1 className="font-display text-[28px] font-semibold leading-tight tracking-[-0.02em] text-fg-primary">Your daily loop</h1>
-              <p className="text-fg-secondary text-[15px]">Three taps a day. That's it.</p>
-            </div>
-            <div className="space-y-3">
-              {[
-                {
-                  icon: Sunrise,
-                  title: '1. Check Today each morning',
-                  body: 'See your fatigue score and what it recommends — hard, moderate, light, or rest. Log last night’s sleep in one tap for a sharper score.',
-                },
-                {
-                  icon: Zap,
-                  title: '2. Tap “Start now”',
-                  body: 'One tap starts a workout matched to your energy — no planning required. Too cooked? There’s always a 10-minute option.',
-                },
-                {
-                  icon: Timer,
-                  title: '3. Log sets, rest runs itself',
-                  body: 'Enter weight and reps as you go; the rest timer starts automatically. Finished workouts feed tomorrow’s fatigue score.',
-                },
-              ].map((c) => (
-                <div key={c.title} className="rounded-card border border-line-subtle bg-surface-card p-4 flex gap-3">
-                  <div className="w-10 h-10 rounded-control bg-action-primary-quiet flex items-center justify-center shrink-0">
-                    <c.icon className="h-5 w-5 text-coral-300" />
+            <AppWalkthrough
+              intro={
+                picked && (
+                  <div className="flex items-center gap-2 rounded-control bg-action-primary-quiet text-coral-300 px-4 py-2.5 text-[14px] font-medium">
+                    <Check className="h-4 w-4" /> {picked} — day 1 is {fmtDayLabel(parseDateKey(startDate))}
                   </div>
-                  <div>
-                    <div className="text-[15px] font-semibold text-fg-primary">{c.title}</div>
-                    <div className="text-[14px] text-fg-secondary leading-snug">{c.body}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                )
+              }
+            />
             <Button variant="primary" size="lg" fullWidth onClick={() => setStep(3)}>
               Start using ShiftFit
             </Button>
