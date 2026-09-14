@@ -133,7 +133,10 @@ function ExerciseListOverlay({
   const current = exercises[currentExIdx];
   const isDone = (ex: WorkoutExercise) => ex.sets.length > 0 && ex.sets.every((s) => s.done);
   const completed = exercises.filter((ex) => ex.id !== current?.id && isDone(ex));
-  const next = exercises.slice(currentExIdx + 1).filter((ex) => !isDone(ex));
+  // every not-yet-done exercise other than the current one, in original
+  // order — NOT limited to array positions after currentExIdx, since
+  // jumping ahead to a later exercise must not drop earlier undone ones
+  const next = exercises.filter((ex) => ex.id !== current?.id && !isDone(ex));
 
   return (
     <div
