@@ -4,7 +4,7 @@ import { useStore } from '../lib/store';
 import { uid } from '../lib/storage';
 import { localISO } from '../lib/schedule';
 import { WORKOUT_LIBRARY } from '../lib/library';
-import { Button, ConfirmSheet, MetricTile, Stepper } from '../components/ds';
+import { Button, MetricTile, Stepper } from '../components/ds';
 import type { Workout, WorkoutExercise } from '../lib/types';
 
 const REST_OPTIONS = [30, 60, 90, 120, 180];
@@ -80,7 +80,6 @@ function RestRing({
           <div className="flex items-center gap-2">
             <button onClick={() => onAdjust(-15000)} className="flex-1 rounded-control bg-surface-inset py-2 text-[12px] font-bold text-fg-body hover:bg-surface-hover">−15s</button>
             <button onClick={() => onAdjust(15000)} className="flex-1 rounded-control bg-surface-inset py-2 text-[12px] font-bold text-fg-body hover:bg-surface-hover">+15s</button>
-            <button onClick={onSkip} className="flex-1 rounded-control bg-action-accent py-2 text-[12px] font-bold text-fg-onAccent active:scale-95 transition-transform">Skip</button>
           </div>
         </div>
       </div>
@@ -148,7 +147,6 @@ export default function Tracker({
   const [summary, setSummary] = useState<{ min: number; volume: number; sets: number; goal?: number } | null>(null);
   const [currentExIdx, setCurrentExIdx] = useState(0);
   const [customizeOpen, setCustomizeOpen] = useState(false);
-  const [pendingAdvance, setPendingAdvance] = useState(false);
   const beepedFor = useRef<number | null>(null);
   const restDurationRef = useRef(90);
 
@@ -273,20 +271,6 @@ export default function Tracker({
   const currentDoneCount = currentEx ? currentEx.sets.filter((s) => s.done).length : 0;
   const currentTotalSets = currentEx ? currentEx.sets.length : 0;
 
-  // exercise just became fully done with no rest timer running (rest already
-  // finished, was skipped, or sets were removed down to the completed count)
-  // → confirm before moving on, rather than silently jumping ahead.
-  // A running timer is handled by the rest-completion effect above instead.
-  useEffect(() => {
-    if (currentTotalSets === 0 || currentDoneCount < currentTotalSets) {
-      setPendingAdvance(false);
-      return;
-    }
-    if (restEnd === null && safeExIdx < exercises.length - 1) {
-      setPendingAdvance(true);
-    }
-  }, [currentDoneCount, currentTotalSets, restEnd, safeExIdx, exercises.length]);
-
   // if the workout vanished mid-session (deleted elsewhere), leave
   useEffect(() => {
     if (!workout) onExit();
@@ -316,6 +300,17 @@ export default function Tracker({
       beepedFor.current = null;
       restDurationRef.current = restSecs;
       setRestEnd(Date.now() + restSecs * 1000);
+
+      // that was the exercise's final set → auto-advance the view to the
+      // next exercise shortly after, giving the checkmark a moment to
+      // register. The rest timer above is untouched by this view change.
+      const exIdxNow = exercises.findIndex((e) => e.id === exId);
+      const allDone = ex.sets.every((s, i) => (i === idx ? true : s.done));
+      if (allDone && exIdxNow >= 0 && exIdxNow < exercises.length - 1) {
+        setTimeout(() => {
+          setCurrentExIdx((i) => (i === exIdxNow ? exIdxNow + 1 : i));
+        }, 500);
+      }
     }
   };
 
@@ -737,19 +732,6 @@ export default function Tracker({
           else if (v < currentEx.sets.length) removeSet(currentEx.id);
         }}
         onClose={() => setCustomizeOpen(false)}
-      />
-
-      <ConfirmSheet
-        open={pendingAdvance}
-        title="Move to next exercise?"
-        message={currentEx ? `You're all done with ${currentEx.name}.` : undefined}
-        confirmLabel="Next exercise"
-        danger={false}
-        onConfirm={() => {
-          setPendingAdvance(false);
-          setCurrentExIdx((i) => Math.min(exercises.length - 1, i + 1));
-        }}
-        onCancel={() => setPendingAdvance(false)}
       />
     </div>
   );
