@@ -11,6 +11,18 @@ const REST_OPTIONS = [30, 60, 90, 120, 180];
 const CARDIO_TYPES = new Set(['Run', 'Walk', 'Cycle', 'Swim', 'Cardio', 'Row']);
 const DURATION_CHIPS = [5, 10, 15, 20, 30, 45, 60];
 
+// same heuristic style as the dumbbell-label check: case-insensitive
+// substring match on the exercise name, nothing fancier
+const isSingleArmExercise = (name: string) => /single arm|one arm|unilateral/i.test(name);
+
+function makeSets(count: number, base: { reps: number; weightKg: number }, singleArm: boolean): WorkoutSet[] {
+  if (!singleArm) return Array.from({ length: count }, () => ({ ...base, done: false }));
+  return Array.from({ length: count }, () => [
+    { ...base, done: false, side: 'left' as const },
+    { ...base, done: false, side: 'right' as const },
+  ]).flat();
+}
+
 function fmtElapsed(sec: number): string {
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
@@ -351,14 +363,11 @@ export default function Tracker({
         [];
       const exercises: WorkoutExercise[] = plan.map((p) => {
         const last = lastPerf(p.name);
+        const base = { reps: last?.reps ?? p.reps, weightKg: last?.weightKg ?? 0 };
         return {
           id: uid(),
           name: p.name,
-          sets: Array.from({ length: p.sets }, () => ({
-            reps: last?.reps ?? p.reps,
-            weightKg: last?.weightKg ?? 0,
-            done: false,
-          })),
+          sets: makeSets(p.sets, base, isSingleArmExercise(p.name)),
         };
       });
       save({ startedAt: localISO(new Date()), exercises });
@@ -422,8 +431,13 @@ export default function Tracker({
     setSet(exId, idx, { done });
     if (done) {
       beepedFor.current = null;
-      restDurationRef.current = restSecs;
-      setRestEnd(Date.now() + restSecs * 1000);
+      // single-arm: the left side of a pair leads straight into the right
+      // side with no rest in between — only completing the right entry
+      // starts the timer
+      if (set.side !== 'left') {
+        restDurationRef.current = restSecs;
+        setRestEnd(Date.now() + restSecs * 1000);
+      }
 
       // that was the exercise's final set → auto-advance the view to the
       // next exercise shortly after, giving the checkmark a moment to
@@ -440,17 +454,22 @@ export default function Tracker({
 
   const addSet = (exId: string) => {
     const ex = exercises.find((e) => e.id === exId);
-    const last = ex?.sets[ex.sets.length - 1];
+    if (!ex) return;
+    const last = ex.sets[ex.sets.length - 1];
+    const base = { reps: last?.reps ?? 10, weightKg: last?.weightKg ?? 0 };
+    const newSets = makeSets(1, base, isSingleArmExercise(ex.name));
     save({
-      exercises: exercises.map((e) =>
-        e.id !== exId ? e : { ...e, sets: [...e.sets, { reps: last?.reps ?? 10, weightKg: last?.weightKg ?? 0, done: false }] }
-      ),
+      exercises: exercises.map((e) => (e.id !== exId ? e : { ...e, sets: [...e.sets, ...newSets] })),
     });
   };
 
   const removeSet = (exId: string) => {
     save({
-      exercises: exercises.map((e) => (e.id !== exId ? e : { ...e, sets: e.sets.slice(0, -1) })),
+      exercises: exercises.map((e) => {
+        if (e.id !== exId) return e;
+        const n = isSingleArmExercise(e.name) ? 2 : 1;
+        return { ...e, sets: e.sets.slice(0, Math.max(0, e.sets.length - n)) };
+      }),
     });
   };
 
@@ -460,8 +479,9 @@ export default function Tracker({
     const name = newEx.trim();
     if (!name) return;
     const last = lastPerf(name);
+    const base = { reps: last?.reps ?? 10, weightKg: last?.weightKg ?? 0 };
     save({
-      exercises: [...exercises, { id: uid(), name, sets: [{ reps: last?.reps ?? 10, weightKg: last?.weightKg ?? 0, done: false }] }],
+      exercises: [...exercises, { id: uid(), name, sets: makeSets(1, base, isSingleArmExercise(name)) }],
     });
     setNewEx('');
   };
@@ -713,6 +733,7 @@ export default function Tracker({
           const doneCount = ex.sets.filter((s) => s.done).length;
           const exComplete = ex.sets.length > 0 && doneCount === ex.sets.length;
           const isDumbbell = /dumbbell/i.test(ex.name);
+          const isSingleArm = isSingleArmExercise(ex.name);
           return (
             <section
               key={ex.id}
@@ -755,18 +776,22 @@ export default function Tracker({
                 </span>
                 <span className="text-center">Reps</span><span />
               </div>
-              <ul className="space-y-1.5">
-                {ex.sets.map((s, i) => (
+              <ul>
+                {ex.sets.map((s, i) => {
+                  // single-arm pairs (left,right) sit tight against each other;
+                  // extra breathing room goes before the next pair's left side
+                  const gapClass = i === 0 ? '' : isSingleArm ? (i % 2 === 0 ? 'mt-3' : 'mt-1') : 'mt-1.5';
+                  return (
                   <li
                     key={i}
-                    className={`grid grid-cols-[28px_1fr_1fr_40px] gap-2 items-center rounded-card px-2.5 py-2 transition-colors duration-fast ease-standard ${
+                    className={`${gapClass} grid grid-cols-[28px_1fr_1fr_40px] gap-2 items-center rounded-card px-2.5 py-2 transition-colors duration-fast ease-standard ${
                       s.done ? 'bg-action-accent-quiet border border-[rgba(226,96,63,.3)]' : 'bg-surface-inset/60 border border-line-subtle'
                     }`}
                   >
                     <span className={`h-6 w-6 rounded-full flex items-center justify-center text-[11px] font-extrabold ${
                       s.done ? 'bg-action-accent text-fg-onAccent' : 'bg-surface-raised text-fg-tertiary'
                     }`}>
-                      {i + 1}
+                      {s.side === 'left' ? 'L' : s.side === 'right' ? 'R' : i + 1}
                     </span>
                     <div className="flex flex-col items-center">
                       <input
@@ -798,7 +823,8 @@ export default function Tracker({
                       <Check className={`h-4 w-4 ${s.done ? 'text-fg-onAccent' : 'text-fg-disabled'}`} strokeWidth={3} />
                     </button>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
               <button onClick={() => addSet(ex.id)}
                 className="mt-2.5 w-full rounded-control border border-dashed border-line-strong py-2 text-[12px] font-semibold text-fg-tertiary hover:bg-surface-hover flex items-center justify-center gap-1.5">

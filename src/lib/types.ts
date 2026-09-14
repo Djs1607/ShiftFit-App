@@ -33,6 +33,7 @@ export interface WorkoutSet {
   reps: number;
   weightKg: number; // 0 = bodyweight / not tracked
   done: boolean;
+  side?: 'left' | 'right'; // set when the exercise is tracked per-side (unilateral)
 }
 
 export interface WorkoutExercise {
