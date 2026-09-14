@@ -4,8 +4,8 @@ import { useStore } from '../lib/store';
 import { uid } from '../lib/storage';
 import { localISO } from '../lib/schedule';
 import { WORKOUT_LIBRARY } from '../lib/library';
-import { Button, MetricTile, Stepper } from '../components/ds';
-import type { Workout, WorkoutExercise } from '../lib/types';
+import { Button, ListRow, MetricTile, Stepper } from '../components/ds';
+import type { Workout, WorkoutExercise, WorkoutSet } from '../lib/types';
 
 const REST_OPTIONS = [30, 60, 90, 120, 180];
 const CARDIO_TYPES = new Set(['Run', 'Walk', 'Cycle', 'Swim', 'Cardio', 'Row']);
@@ -87,6 +87,125 @@ function RestRing({
   );
 }
 
+// ── exercise list overview ──────────────────────────────────────────
+// Full-screen overlay (same shell as WalkthroughOverlay: fixed inset-0,
+// safe-area padding, Close/action header) rather than the bottom sheets
+// used elsewhere in this file — this is a scrolling list, not a quick
+// confirm, so it gets the full-screen treatment.
+function fmtSetRange(sets: WorkoutSet[]): string {
+  const reps = sets.map((s) => s.reps);
+  const min = Math.min(...reps), max = Math.max(...reps);
+  return `${sets.length} × ${min === max ? min : `${min}-${max}`}`;
+}
+
+function ExerciseThumb({ done }: { done: boolean }) {
+  return (
+    <span className="relative h-11 w-11 shrink-0 rounded-card flex items-center justify-center bg-surface-raised text-fg-tertiary">
+      <Dumbbell className="h-5 w-5" />
+      {done && (
+        <span className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-action-accent text-fg-onAccent flex items-center justify-center border-2 border-bg-base">
+          <Check className="h-3 w-3" strokeWidth={3} />
+        </span>
+      )}
+    </span>
+  );
+}
+
+function ExerciseListOverlay({
+  open, exercises, currentExIdx, onClose, onSelectExercise, onCustomize,
+}: {
+  open: boolean;
+  exercises: WorkoutExercise[];
+  currentExIdx: number;
+  onClose: () => void;
+  onSelectExercise: (idx: number) => void;
+  onCustomize: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const current = exercises[currentExIdx];
+  const isDone = (ex: WorkoutExercise) => ex.sets.length > 0 && ex.sets.every((s) => s.done);
+  const completed = exercises.filter((ex) => ex.id !== current?.id && isDone(ex));
+  const next = exercises.slice(currentExIdx + 1).filter((ex) => !isDone(ex));
+
+  return (
+    <div
+      className="fixed inset-0 z-40 flex flex-col bg-bg-base text-fg-primary"
+      style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      <div className="flex items-center justify-between px-5 pt-5 max-w-md mx-auto w-full shrink-0">
+        <button onClick={onClose} className="text-[14px] font-semibold text-fg-secondary">Close</button>
+        <p className="text-[13px] font-semibold uppercase tracking-wider text-fg-tertiary">Exercises</p>
+        <button onClick={onCustomize} className="text-[14px] font-semibold text-action-accent">Customize</button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 py-6 max-w-md mx-auto w-full space-y-6">
+        {completed.length > 0 && (
+          <section>
+            <h2 className="mb-2 text-[12px] font-bold uppercase tracking-wider text-fg-tertiary">Completed Exercises</h2>
+            <ul className="overflow-hidden rounded-card border border-line-subtle bg-surface-card divide-y divide-line-subtle">
+              {completed.map((ex) => (
+                <li key={ex.id}>
+                  <ListRow
+                    title={ex.name}
+                    subtitle={ex.sets.map((s) => `${s.weightKg} x ${s.reps}`).join(' | ')}
+                    leading={<ExerciseThumb done />}
+                    chevron={false}
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {current && (
+          <section>
+            <h2 className="mb-2 text-[12px] font-bold uppercase tracking-wider text-action-accent">Current Exercise</h2>
+            <ul className="overflow-hidden rounded-card border border-[rgba(226,96,63,.35)] bg-surface-card divide-y divide-line-subtle">
+              <li>
+                <ListRow
+                  title={current.name}
+                  meta={fmtSetRange(current.sets)}
+                  leading={<ExerciseThumb done={isDone(current)} />}
+                  chevron={false}
+                />
+              </li>
+            </ul>
+          </section>
+        )}
+
+        {next.length > 0 && (
+          <section>
+            <h2 className="mb-2 text-[12px] font-bold uppercase tracking-wider text-fg-tertiary">Next Exercises</h2>
+            <ul className="overflow-hidden rounded-card border border-line-subtle bg-surface-card divide-y divide-line-subtle">
+              {next.map((ex) => {
+                const idx = exercises.findIndex((e) => e.id === ex.id);
+                return (
+                  <li key={ex.id}>
+                    <ListRow
+                      title={ex.name}
+                      meta={fmtSetRange(ex.sets)}
+                      leading={<ExerciseThumb done={false} />}
+                      onClick={() => { onSelectExercise(idx); onClose(); }}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── customise-exercise sheet ────────────────────────────────────────
 // Set-count editor for the active exercise. Same shell as ConfirmSheet
 // (backdrop, slide-up panel, escape-to-close) — content differs so it's
@@ -147,6 +266,7 @@ export default function Tracker({
   const [summary, setSummary] = useState<{ min: number; volume: number; sets: number; goal?: number } | null>(null);
   const [currentExIdx, setCurrentExIdx] = useState(0);
   const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [exerciseListOpen, setExerciseListOpen] = useState(false);
   const beepedFor = useRef<number | null>(null);
   const restDurationRef = useRef(90);
 
@@ -534,7 +654,9 @@ export default function Tracker({
               <X className="h-4 w-4" /> Exit
             </button>
             <p className="font-bold text-[14px] flex items-center gap-1.5"><Dumbbell className="h-4 w-4 text-amber-400" />{workout.type}</p>
-            <span className="w-10" />
+            <button onClick={() => setExerciseListOpen(true)} className="text-[14px] text-fg-secondary font-semibold">
+              Exercises
+            </button>
           </div>
           <div className="grid grid-cols-3 divide-x divide-line-subtle rounded-card bg-surface-card border border-line-subtle py-2.5">
             <MetricTile label="Time" value={fmtElapsed(elapsedSec)} size="sm" className="items-center" />
@@ -732,6 +854,15 @@ export default function Tracker({
           else if (v < currentEx.sets.length) removeSet(currentEx.id);
         }}
         onClose={() => setCustomizeOpen(false)}
+      />
+
+      <ExerciseListOverlay
+        open={exerciseListOpen}
+        exercises={exercises}
+        currentExIdx={safeExIdx}
+        onClose={() => setExerciseListOpen(false)}
+        onSelectExercise={(idx) => setCurrentExIdx(idx)}
+        onCustomize={() => {}}
       />
     </div>
   );
