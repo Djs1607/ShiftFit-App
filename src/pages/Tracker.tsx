@@ -95,13 +95,13 @@ function RestRing({
 function fmtSetRange(sets: WorkoutSet[]): string {
   const reps = sets.map((s) => s.reps);
   const min = Math.min(...reps), max = Math.max(...reps);
-  return `${sets.length} × ${min === max ? min : `${min}-${max}`}`;
+  return `${sets.length} sets x ${min === max ? min : `${min}-${max}`} reps`;
 }
 
 function ExerciseThumb({ done }: { done: boolean }) {
   return (
-    <span className="relative h-11 w-11 shrink-0 rounded-card flex items-center justify-center bg-surface-raised text-fg-tertiary">
-      <Dumbbell className="h-5 w-5" />
+    <span className="relative h-14 w-14 shrink-0 rounded-card flex items-center justify-center bg-surface-raised text-fg-tertiary">
+      <Dumbbell className="h-6 w-6" />
       {done && (
         <span className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-action-accent text-fg-onAccent flex items-center justify-center border-2 border-bg-base">
           <Check className="h-3 w-3" strokeWidth={3} />
@@ -142,17 +142,18 @@ function ExerciseListOverlay({
     >
       <div className="flex items-center justify-between px-5 pt-5 max-w-md mx-auto w-full shrink-0">
         <button onClick={onClose} className="text-[14px] font-semibold text-fg-secondary">Close</button>
-        <p className="text-[13px] font-semibold uppercase tracking-wider text-fg-tertiary">Exercises</p>
         <button onClick={onCustomize} className="text-[14px] font-semibold text-action-accent">Customize</button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 py-6 max-w-md mx-auto w-full space-y-6">
+        <h1 className="font-display text-[22px] font-semibold leading-tight tracking-[-0.01em] text-fg-primary">Exercise List</h1>
+
         {completed.length > 0 && (
           <section>
-            <h2 className="mb-2 text-[12px] font-bold uppercase tracking-wider text-fg-tertiary">Completed Exercises</h2>
-            <ul className="overflow-hidden rounded-card border border-line-subtle bg-surface-card divide-y divide-line-subtle">
+            <h2 className="mb-2 text-[13px] font-medium text-fg-tertiary">Completed Exercises</h2>
+            <ul className="space-y-2">
               {completed.map((ex) => (
-                <li key={ex.id}>
+                <li key={ex.id} className="rounded-card border border-line-subtle bg-surface-card">
                   <ListRow
                     title={ex.name}
                     subtitle={ex.sets.map((s) => `${s.weightKg} x ${s.reps}`).join(' | ')}
@@ -167,12 +168,12 @@ function ExerciseListOverlay({
 
         {current && (
           <section>
-            <h2 className="mb-2 text-[12px] font-bold uppercase tracking-wider text-action-accent">Current Exercise</h2>
-            <ul className="overflow-hidden rounded-card border border-[rgba(226,96,63,.35)] bg-surface-card divide-y divide-line-subtle">
-              <li>
+            <h2 className="mb-2 text-[13px] font-medium text-amber-400">Current Exercise</h2>
+            <ul>
+              <li className="rounded-card border border-[rgba(226,96,63,.35)] bg-surface-card">
                 <ListRow
                   title={current.name}
-                  meta={fmtSetRange(current.sets)}
+                  subtitle={fmtSetRange(current.sets)}
                   leading={<ExerciseThumb done={isDone(current)} />}
                   chevron={false}
                 />
@@ -183,15 +184,15 @@ function ExerciseListOverlay({
 
         {next.length > 0 && (
           <section>
-            <h2 className="mb-2 text-[12px] font-bold uppercase tracking-wider text-fg-tertiary">Next Exercises</h2>
-            <ul className="overflow-hidden rounded-card border border-line-subtle bg-surface-card divide-y divide-line-subtle">
+            <h2 className="mb-2 text-[13px] font-medium text-fg-tertiary">Next Exercises</h2>
+            <ul className="space-y-2">
               {next.map((ex) => {
                 const idx = exercises.findIndex((e) => e.id === ex.id);
                 return (
-                  <li key={ex.id}>
+                  <li key={ex.id} className="rounded-card border border-line-subtle bg-surface-card">
                     <ListRow
                       title={ex.name}
-                      meta={fmtSetRange(ex.sets)}
+                      subtitle={fmtSetRange(ex.sets)}
                       leading={<ExerciseThumb done={false} />}
                       onClick={() => { onSelectExercise(idx); onClose(); }}
                     />
