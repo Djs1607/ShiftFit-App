@@ -708,6 +708,7 @@ export default function Tracker({
           const last = lastPerf(ex.name);
           const doneCount = ex.sets.filter((s) => s.done).length;
           const exComplete = ex.sets.length > 0 && doneCount === ex.sets.length;
+          const isDumbbell = /dumbbell/i.test(ex.name);
           return (
             <section
               key={ex.id}
@@ -741,7 +742,14 @@ export default function Tracker({
               )}
 
               <div className="grid grid-cols-[28px_1fr_1fr_40px] gap-2 text-[10px] text-fg-disabled font-bold uppercase tracking-wider mb-1.5 px-0.5">
-                <span>Set</span><span className="text-center">Kg</span><span className="text-center">Reps</span><span />
+                <span>Set</span>
+                <span className="text-center">
+                  Kg
+                  {isDumbbell && (
+                    <span className="block normal-case font-medium tracking-normal text-fg-disabled/80">per dumbbell</span>
+                  )}
+                </span>
+                <span className="text-center">Reps</span><span />
               </div>
               <ul className="space-y-1.5">
                 {ex.sets.map((s, i) => (
