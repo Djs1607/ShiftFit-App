@@ -643,6 +643,7 @@ export default function Tracker({
                       <input
                         type="number" inputMode="decimal" min={0} value={s.weightKg || ''} placeholder="0"
                         onChange={(e) => setSet(ex.id, i, { weightKg: Math.max(0, Number(e.target.value) || 0) })}
+                        onFocus={(e) => e.target.select()}
                         className={`w-full bg-transparent text-center text-[17px] font-bold font-mono outline-none ${
                           s.done ? 'text-fg-primary' : 'text-fg-body'
                         }`}
@@ -652,6 +653,7 @@ export default function Tracker({
                       <input
                         type="number" inputMode="numeric" min={0} value={s.reps || ''} placeholder="0"
                         onChange={(e) => setSet(ex.id, i, { reps: Math.max(0, Number(e.target.value) || 0) })}
+                        onFocus={(e) => e.target.select()}
                         className={`w-full bg-transparent text-center text-[17px] font-bold font-mono outline-none ${
                           s.done ? 'text-fg-primary' : 'text-fg-body'
                         }`}
