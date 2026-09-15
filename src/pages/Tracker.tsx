@@ -54,20 +54,24 @@ function beep(times = 1) {
 // without scrolling. Tap the ring itself to skip (plus explicit buttons
 // for anyone who wants a bigger target).
 function RestRing({
-  restLeft, restDuration, onAdjust, onSkip,
-}: { restLeft: number; restDuration: number; onAdjust: (deltaMs: number) => void; onSkip: () => void }) {
+  restLeft, restDuration, variant = 'rest', onAdjust, onSkip,
+}: {
+  restLeft: number; restDuration: number; variant?: 'rest' | 'transition';
+  onAdjust: (deltaMs: number) => void; onSkip: () => void;
+}) {
   const R = 50;
   const C = 2 * Math.PI * R;
   const frac = restDuration > 0 ? Math.min(1, Math.max(0, restLeft / restDuration)) : 0;
   const offset = C * (1 - frac);
   const hot = restLeft <= 5;
+  const isTransition = variant === 'transition';
 
   return (
     <section className="rounded-sheet bg-surface-raised border border-[rgba(226,96,63,.3)] p-4 mb-4 shadow-lg shadow-black/30">
       <div className="flex items-center gap-4">
         <button
           onClick={onSkip}
-          aria-label="Tap to skip rest"
+          aria-label={isTransition ? 'Tap to skip side switch' : 'Tap to skip rest'}
           className="relative h-28 w-28 shrink-0 active:scale-95 transition-transform"
         >
           <svg viewBox="0 0 120 120" className="h-28 w-28 -rotate-90">
@@ -86,9 +90,13 @@ function RestRing({
 
         <div className="flex-1 min-w-0">
           <p className="text-[12px] font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-1.5">
-            <Timer className="h-3.5 w-3.5" /> Resting
+            <Timer className="h-3.5 w-3.5" /> {isTransition ? 'Switch sides' : 'Resting'}
           </p>
-          <p className="text-[14px] text-fg-secondary mb-3 leading-snug">Next set unlocks when the ring empties, or skip whenever you're ready.</p>
+          <p className="text-[14px] text-fg-secondary mb-3 leading-snug">
+            {isTransition
+              ? 'Get set up on the other side, then keep going.'
+              : "Next set unlocks when the ring empties, or skip whenever you're ready."}
+          </p>
           <div className="flex items-center gap-2">
             <button onClick={() => onAdjust(-15000)} className="flex-1 rounded-control bg-surface-inset py-2 text-[12px] font-bold text-fg-body hover:bg-surface-hover">−15s</button>
             <button onClick={() => onAdjust(15000)} className="flex-1 rounded-control bg-surface-inset py-2 text-[12px] font-bold text-fg-body hover:bg-surface-hover">+15s</button>
@@ -285,6 +293,7 @@ export default function Tracker({
   const [exerciseListOpen, setExerciseListOpen] = useState(false);
   const beepedFor = useRef<number | null>(null);
   const restDurationRef = useRef(90);
+  const restKindRef = useRef<'rest' | 'transition'>('rest');
 
   // cardio countdown state
   const [targetMin, setTargetMin] = useState<number | null>(null);
@@ -431,10 +440,15 @@ export default function Tracker({
     setSet(exId, idx, { done });
     if (done) {
       beepedFor.current = null;
-      // single-arm: the left side of a pair leads straight into the right
-      // side with no rest in between — only completing the right entry
-      // starts the timer
-      if (set.side !== 'left') {
+      // single-arm: the left side of a pair gets a short fixed transition
+      // to switch sides (not the user's chosen rest duration); only the
+      // right entry starts the normal rest timer
+      if (set.side === 'left') {
+        restKindRef.current = 'transition';
+        restDurationRef.current = 10;
+        setRestEnd(Date.now() + 10 * 1000);
+      } else {
+        restKindRef.current = 'rest';
         restDurationRef.current = restSecs;
         setRestEnd(Date.now() + restSecs * 1000);
       }
@@ -694,7 +708,7 @@ export default function Tracker({
       {restLeft !== null && (
         <div className="fixed inset-x-0 top-24 z-30 flex justify-center px-4 pointer-events-none">
           <div className="w-full max-w-md pointer-events-auto">
-            <RestRing restLeft={restLeft} restDuration={restDurationRef.current} onAdjust={adjustRest} onSkip={skipRest} />
+            <RestRing restLeft={restLeft} restDuration={restDurationRef.current} variant={restKindRef.current} onAdjust={adjustRest} onSkip={skipRest} />
           </div>
         </div>
       )}
