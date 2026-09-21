@@ -1,17 +1,37 @@
 // ── Rest-timer state, owned above Tracker ───────────────────────────
-// Lives in Shell so the countdown end-timestamp (and the chosen rest length)
-// survive Tracker being unmounted. Tracker still drives the 1s tick and
-// decides what happens on expiry; this only holds and mutates the state.
+// Lives in Shell and is fully self-sufficient: it runs its own interval
+// while a countdown is active, detects expiry against its own end
+// timestamp, and beeps + clears on its own. It works whether or not any
+// screen is mounted. Consumers only read state and react to `lastExpiry`.
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { beep } from './beep';
 
 export type RestKind = 'rest' | 'transition';
 type ActiveRest = { end: number; duration: number; kind: RestKind };
 
-export function useRestTimer() {
+export function useRestTimer(onExpire?: () => void) {
   const [restSecs, setRestSecs] = useState(90); // the user's chosen rest length
   const [active, setActive] = useState<ActiveRest | null>(null);
+  // end-timestamp of the most recent countdown that ran to zero (not skipped)
+  const [lastExpiry, setLastExpiry] = useState<number | null>(null);
   const beepedFor = useRef<number | null>(null); // end-timestamp already handled
+  const onExpireRef = useRef(onExpire);
+  useEffect(() => { onExpireRef.current = onExpire; });
+
+  // own tick, alive only while a countdown is running
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => {
+      if (Date.now() < active.end || beepedFor.current === active.end) return;
+      beepedFor.current = active.end;
+      beep();
+      setActive(null);
+      setLastExpiry(active.end);
+      onExpireRef.current?.();
+    }, 500);
+    return () => clearInterval(id);
+  }, [active]);
 
   const start = (kind: RestKind, seconds: number) => {
     beepedFor.current = null;
@@ -24,16 +44,8 @@ export function useRestTimer() {
   };
 
   // shift the running countdown; never lets it land in the past
-  const adjust = (deltaMs: number, now: number) =>
-    setActive((a) => (a ? { ...a, end: Math.max(now + 1000, a.end + deltaMs) } : a));
-
-  // true exactly once per countdown: the caller should then beep / react
-  const expire = () => {
-    if (!active || beepedFor.current === active.end) return false;
-    beepedFor.current = active.end;
-    setActive(null);
-    return true;
-  };
+  const adjust = (deltaMs: number) =>
+    setActive((a) => (a ? { ...a, end: Math.max(Date.now() + 1000, a.end + deltaMs) } : a));
 
   // back to a clean slate, as if Tracker had just mounted fresh
   const reset = () => {
@@ -46,7 +58,8 @@ export function useRestTimer() {
     restEnd: active?.end ?? null,
     restDuration: active?.duration ?? restSecs,
     restKind: active?.kind ?? ('rest' as RestKind),
-    start, clear, adjust, expire, reset,
+    lastExpiry,
+    start, clear, adjust, reset,
   };
 }
 

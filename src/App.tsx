@@ -8,6 +8,7 @@ import { Dumbbell, UserRound, LayoutDashboard, TrendingUp } from 'lucide-react';
 import { StoreProvider, useStore } from './lib/store';
 import { load, save } from './lib/storage';
 import { useRestTimer } from './lib/restTimer';
+import { useSessionView } from './lib/sessionView';
 import { TabBar, type TabBarItem } from './components/ds';
 import Onboarding from './pages/Onboarding';
 import Auth from './pages/Auth';
@@ -17,6 +18,7 @@ import Workouts from './pages/Workouts';
 import Progress from './pages/Progress';
 import Profile from './pages/Profile';
 import Tracker from './pages/Tracker';
+import { WorkoutPill } from './components/WorkoutPill';
 
 // `shifts` (the Patterns/Shifts page) is not shown in the bottom tab bar —
 // it's reached via the "Shift pattern" row on the Profile page instead,
@@ -34,7 +36,15 @@ function Shell() {
   const { user, userWorkouts } = useStore();
   const [tab, setTab] = useState<Tab>('today');
   const [trackingId, setTrackingId] = useState<string | null>(null);
-  const restTimer = useRestTimer();
+  // minimized: the active workout keeps running but Tracker is off screen
+  // (a pill above the tab bar stands in). A rest running out pulls it back up.
+  const [minimized, setMinimized] = useState(false);
+  const restTimer = useRestTimer(() => setMinimized(false));
+
+  // auto-resume a session that was started but never finished or exited
+  const liveId = trackingId ?? userWorkouts.find((w) => w.startedAt && !w.completed && !w.exitedAt)?.id ?? null;
+  const liveWorkout = userWorkouts.find((w) => w.id === liveId);
+  const session = useSessionView(liveId, liveWorkout);
   const [onboarded, setOnboarded] = useState(true);
 
   // first-run gate: show onboarding until this user completes/skips it.
@@ -60,16 +70,18 @@ function Shell() {
     );
   }
 
-  // auto-resume a session that was started but never finished or exited
-  const liveId = trackingId ?? userWorkouts.find((w) => w.startedAt && !w.completed && !w.exitedAt)?.id ?? null;
+  // starting or resuming a workout always brings it to full screen
+  const startWorkout = (id: string) => { setTrackingId(id); setMinimized(false); };
 
-  if (liveId) {
+  if (liveId && !minimized) {
     return (
       <Tracker
         workoutId={liveId}
         restTimer={restTimer}
-        onExit={() => { restTimer.reset(); setTrackingId(null); }}
-        onFinished={() => { restTimer.reset(); setTrackingId(null); setTab('progress'); }}
+        session={session}
+        onMinimize={() => setMinimized(true)}
+        onExit={() => { restTimer.reset(); session.reset(); setMinimized(false); setTrackingId(null); }}
+        onFinished={() => { restTimer.reset(); session.reset(); setMinimized(false); setTrackingId(null); setTab('progress'); }}
       />
     );
   }
@@ -88,14 +100,22 @@ function Shell() {
       {/* content */}
       <main
         className="flex-1 mx-auto w-full max-w-md px-5 pt-5"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 80px)' }}
+        style={{ paddingBottom: `calc(env(safe-area-inset-bottom) + ${liveId ? 136 : 80}px)` }}
       >
-        {tab === 'today' && <Today go={setTab} onStart={setTrackingId} />}
+        {tab === 'today' && <Today go={setTab} onStart={startWorkout} />}
         {tab === 'shifts' && <Patterns />}
-        {tab === 'workouts' && <Workouts go={setTab} onStart={setTrackingId} />}
+        {tab === 'workouts' && <Workouts go={setTab} onStart={startWorkout} />}
         {tab === 'progress' && <Progress />}
         {tab === 'profile' && <Profile go={setTab} />}
       </main>
+
+      {liveId && (
+        <WorkoutPill
+          restTimer={restTimer}
+          label={liveWorkout?.exercises?.[session.currentExIdx]?.name ?? liveWorkout?.type ?? 'Workout'}
+          onOpen={() => setMinimized(false)}
+        />
+      )}
 
       {/* bottom tab bar — one-thumb reach */}
       <div className="fixed bottom-0 inset-x-0 z-20 pb-[env(safe-area-inset-bottom)] bg-surface-card/95 backdrop-blur border-t border-line-subtle">

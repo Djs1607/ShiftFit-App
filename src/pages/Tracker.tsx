@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Plus, Check, Trash2, Timer, Flag, Play, Pause, RotateCcw, Dumbbell, ChevronRight, ChevronLeft, SlidersHorizontal } from 'lucide-react';
+import { X, Plus, Check, Trash2, Timer, Flag, Play, Pause, RotateCcw, Dumbbell, ChevronRight, ChevronLeft, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { uid } from '../lib/storage';
 import { localISO } from '../lib/schedule';
@@ -7,6 +7,8 @@ import { WORKOUT_LIBRARY } from '../lib/library';
 import { Button, ListRow, MetricTile, Stepper } from '../components/ds';
 import type { Workout, WorkoutExercise, WorkoutSet } from '../lib/types';
 import type { RestTimer } from '../lib/restTimer';
+import type { SessionView } from '../lib/sessionView';
+import { beep } from '../lib/beep';
 
 const REST_OPTIONS = [30, 60, 90, 120, 180];
 const CARDIO_TYPES = new Set(['Run', 'Walk', 'Cycle', 'Swim', 'Cardio', 'Row']);
@@ -30,24 +32,6 @@ function fmtElapsed(sec: number): string {
   const s = sec % 60;
   const p = (n: number) => String(n).padStart(2, '0');
   return h > 0 ? `${h}:${p(m)}:${p(s)}` : `${p(m)}:${p(s)}`;
-}
-
-function beep(times = 1) {
-  try {
-    const ctx = new AudioContext();
-    for (let i = 0; i < times; i++) {
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.connect(g); g.connect(ctx.destination);
-      o.frequency.value = 880;
-      const t0 = ctx.currentTime + i * 0.35;
-      g.gain.setValueAtTime(0.15, t0);
-      o.start(t0);
-      o.stop(t0 + 0.25);
-    }
-    setTimeout(() => ctx.close(), 400 + times * 350);
-  } catch { /* audio unavailable */ }
-  try { navigator.vibrate?.(times > 1 ? [200, 100, 200] : 200); } catch { /* no vibration */ }
 }
 
 // ── circular rest-timer ring ─────────────────────────────────────────
@@ -398,24 +382,18 @@ function CustomizeExerciseSheet({
 }
 
 export default function Tracker({
-  workoutId, restTimer, onExit, onFinished,
-}: { workoutId: string; restTimer: RestTimer; onExit: () => void; onFinished: () => void }) {
+  workoutId, restTimer, session, onMinimize, onExit, onFinished,
+}: { workoutId: string; restTimer: RestTimer; session: SessionView; onMinimize: () => void; onExit: () => void; onFinished: () => void }) {
   const { userWorkouts, userCustomWorkouts, dispatch } = useStore();
   const workout = userWorkouts.find((w) => w.id === workoutId);
 
   const [now, setNow] = useState(Date.now());
   const { restSecs, setRestSecs, restEnd, restDuration, restKind } = restTimer;
+  const { currentExIdx, setCurrentExIdx, sessionPhase, setSessionPhase } = session;
   const [newEx, setNewEx] = useState('');
   const [summary, setSummary] = useState<{ min: number; volume: number; sets: number; goal?: number } | null>(null);
-  const [currentExIdx, setCurrentExIdx] = useState(0);
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [exerciseListOpen, setExerciseListOpen] = useState(false);
-  // local UI state only, never saved. Light/recovery sessions skip the warm-up,
-  // and so does a session already under way (startedAt is only set on first
-  // open) so resuming or reloading mid-workout doesn't replay it.
-  const [sessionPhase, setSessionPhase] = useState<'warmup' | 'exercises' | 'cooldown'>(() =>
-    !workout || workout.intensity === 'light' || workout.startedAt ? 'exercises' : 'warmup'
-  );
 
   // cardio countdown state
   const [targetMin, setTargetMin] = useState<number | null>(null);
@@ -435,21 +413,22 @@ export default function Tracker({
     return () => clearInterval(t);
   }, []);
 
-  // rest-timer completion: beep, then move on to the next exercise if it's
-  // now fully done (this is the only path that auto-advances silently —
-  // it means the user was already sitting through a rest countdown)
+  // The rest timer beeps and clears itself (see useRestTimer). What's left
+  // here is view-only: when a countdown runs out while this screen is
+  // showing a fully-done exercise, move on to the next one. Expiries from
+  // before this mount are ignored, so this is a no-op while unmounted.
+  const seenExpiry = useRef(restTimer.lastExpiry);
   useEffect(() => {
-    if (restEnd && now >= restEnd && restTimer.expire()) {
-      beep();
-      const exs = workout?.exercises ?? [];
-      const idx = Math.min(currentExIdx, Math.max(0, exs.length - 1));
-      const ex = exs[idx];
-      const done = ex ? ex.sets.filter((s) => s.done).length : 0;
-      if (ex && ex.sets.length > 0 && done === ex.sets.length && idx < exs.length - 1) {
-        setCurrentExIdx(idx + 1);
-      }
+    if (restTimer.lastExpiry === seenExpiry.current) return;
+    seenExpiry.current = restTimer.lastExpiry;
+    const exs = workout?.exercises ?? [];
+    const idx = Math.min(currentExIdx, Math.max(0, exs.length - 1));
+    const ex = exs[idx];
+    const done = ex ? ex.sets.filter((s) => s.done).length : 0;
+    if (ex && ex.sets.length > 0 && done === ex.sets.length && idx < exs.length - 1) {
+      setCurrentExIdx(idx + 1);
     }
-  }, [now, restEnd, restTimer, workout, currentExIdx]);
+  }, [restTimer.lastExpiry, workout, currentExIdx, setCurrentExIdx]);
 
   // cardio countdown completion
   useEffect(() => {
@@ -620,7 +599,7 @@ export default function Tracker({
   };
 
   const skipRest = () => restTimer.clear();
-  const adjustRest = (deltaMs: number) => restTimer.adjust(deltaMs, now);
+  const adjustRest = (deltaMs: number) => restTimer.adjust(deltaMs);
 
   // ── completion summary ────────────────────────────────────────────
   if (summary) {
@@ -834,12 +813,17 @@ export default function Tracker({
       {/* header stats */}
       <header className="sticky top-0 z-10 bg-bg-base/95 backdrop-blur border-b border-line-subtle" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="mx-auto max-w-md px-4 pt-3 pb-3">
-          <div className="flex items-center justify-between mb-3">
-            <button onClick={exit} className="flex items-center gap-1 text-[14px] text-fg-secondary font-semibold">
-              <X className="h-4 w-4" /> Exit
-            </button>
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center mb-3">
+            <div className="flex items-center gap-3">
+              <button onClick={exit} className="flex items-center gap-1 text-[14px] text-fg-secondary font-semibold">
+                <X className="h-4 w-4" /> Exit
+              </button>
+              <button onClick={onMinimize} aria-label="Minimize workout" className="text-fg-tertiary">
+                <ChevronDown className="h-5 w-5" />
+              </button>
+            </div>
             <p className="font-bold text-[14px] flex items-center gap-1.5"><Dumbbell className="h-4 w-4 text-amber-400" />{workout.type}</p>
-            <button onClick={() => setExerciseListOpen(true)} className="text-[14px] text-fg-secondary font-semibold">
+            <button onClick={() => setExerciseListOpen(true)} className="justify-self-end text-[14px] text-fg-secondary font-semibold">
               Exercises
             </button>
           </div>
