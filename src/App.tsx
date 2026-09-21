@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { Dumbbell, UserRound, LayoutDashboard, TrendingUp } from 'lucide-react';
 import { StoreProvider, useStore } from './lib/store';
 import { load, save } from './lib/storage';
+import { localISO } from './lib/schedule';
 import { useRestTimer } from './lib/restTimer';
 import { useSessionView } from './lib/sessionView';
 import { TabBar, type TabBarItem } from './components/ds';
@@ -33,7 +34,7 @@ const TABS: TabBarItem<Tab>[] = [
 ];
 
 function Shell() {
-  const { user, userWorkouts } = useStore();
+  const { user, userWorkouts, dispatch } = useStore();
   const [tab, setTab] = useState<Tab>('today');
   const [trackingId, setTrackingId] = useState<string | null>(null);
   // minimized: the active workout keeps running but Tracker is off screen
@@ -70,8 +71,20 @@ function Shell() {
     );
   }
 
-  // starting or resuming a workout always brings it to full screen
-  const startWorkout = (id: string) => { setTrackingId(id); setMinimized(false); };
+  // Starting or resuming a workout always brings it to full screen. If a
+  // *different* workout is still active (i.e. minimized), pause it exactly
+  // as Exit would: keep its data, mark it exited so it doesn't quietly
+  // auto-resume later, and drop its rest timer and view state.
+  const startWorkout = (id: string) => {
+    const other = liveId && liveId !== id ? userWorkouts.find((w) => w.id === liveId) : undefined;
+    if (other) {
+      dispatch({ type: 'saveWorkout', workout: { ...other, exitedAt: localISO(new Date()) } });
+      restTimer.reset();
+      session.reset();
+    }
+    setTrackingId(id);
+    setMinimized(false);
+  };
 
   if (liveId && !minimized) {
     return (
