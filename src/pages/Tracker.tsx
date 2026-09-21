@@ -132,10 +132,10 @@ const COOLDOWN_ITEMS: PrepDef[] = [
 ];
 
 function SessionPhaseScreen({
-  title, defs, now, actionLabel, actionIcon, onAction, onExit,
+  title, defs, now, actionLabel, actionIcon, onAction, skipLabel, onExit,
 }: {
   title: string; defs: PrepDef[]; now: number;
-  actionLabel: string; actionIcon: typeof Flag; onAction: () => void; onExit: () => void;
+  actionLabel: string; actionIcon: typeof Flag; onAction: () => void; skipLabel: string; onExit: () => void;
 }) {
   const [items, setItems] = useState<PrepItem[]>(() => defs.map((d) => ({ id: d.id, name: d.name, seconds: d.seconds, reps: d.reps, done: false })));
   const [timer, setTimer] = useState<{ id: string; end: number } | null>(null);
@@ -217,6 +217,9 @@ function SessionPhaseScreen({
           <Button variant="accent" size="lg" fullWidth icon={actionIcon} onClick={onAction}>
             {actionLabel}
           </Button>
+          <button onClick={onAction} className="mx-auto mt-2 block py-1 text-[13px] text-fg-tertiary">
+            {skipLabel}
+          </button>
         </div>
       </div>
     </div>
@@ -814,6 +817,7 @@ export default function Tracker({
         actionLabel="Start workout"
         actionIcon={Play}
         onAction={() => setSessionPhase('exercises')}
+        skipLabel="Skip warm-up"
         onExit={exit}
       />
     );
@@ -828,6 +832,7 @@ export default function Tracker({
         actionLabel="Finish workout"
         actionIcon={Flag}
         onAction={finish}
+        skipLabel="Skip cool-down"
         onExit={exit}
       />
     );
