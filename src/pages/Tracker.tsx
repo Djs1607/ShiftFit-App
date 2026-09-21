@@ -136,6 +136,16 @@ function SessionPhaseScreen({
 
   const toggleDone = (id: string) => setItems((prev) => prev.map((i) => (i.id === id ? { ...i, done: !i.done } : i)));
 
+  // the primary button walks the list: each tap completes the next unfinished
+  // item (dropping its timer if one is running); once everything is done it
+  // becomes the real action. The skip link jumps past the whole list.
+  const nextItem = items.find((i) => !i.done);
+  const completeNext = () => {
+    if (!nextItem) return onAction();
+    setItems((prev) => prev.map((i) => (i.id === nextItem.id ? { ...i, done: true } : i)));
+    setTimer((t) => (t?.id === nextItem.id ? null : t));
+  };
+
   // one timer at a time: starting another replaces it without touching done;
   // tapping the running item again just stops it
   const toggleTimer = (item: PrepItem) => {
@@ -199,12 +209,14 @@ function SessionPhaseScreen({
 
       <div className="fixed bottom-0 inset-x-0 z-10 bg-bg-base/95 backdrop-blur border-t border-line-subtle pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto max-w-md px-4 py-2.5">
-          <Button variant="accent" size="lg" fullWidth icon={actionIcon} onClick={onAction}>
-            {actionLabel}
+          <Button variant="accent" size="lg" fullWidth icon={nextItem ? Check : actionIcon} onClick={completeNext}>
+            <span className="min-w-0 truncate">{nextItem ? `Done with ${nextItem.name}` : actionLabel}</span>
           </Button>
-          <button onClick={onAction} className="mx-auto mt-2 block py-1 text-[13px] text-fg-tertiary">
-            {skipLabel}
-          </button>
+          {nextItem && (
+            <button onClick={onAction} className="mx-auto mt-2 block py-1 text-[13px] text-fg-tertiary">
+              {skipLabel}
+            </button>
+          )}
         </div>
       </div>
     </div>
