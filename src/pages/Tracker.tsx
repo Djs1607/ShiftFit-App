@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Plus, Check, Trash2, Timer, Flag, Play, Pause, RotateCcw, Dumbbell, ChevronRight, ChevronLeft, SlidersHorizontal } from 'lucide-react';
+import { X, Plus, Check, Trash2, Timer, Flag, Play, Pause, RotateCcw, Dumbbell, ChevronRight, ChevronLeft, SlidersHorizontal, Flame, Wind } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { uid } from '../lib/storage';
 import { localISO } from '../lib/schedule';
@@ -104,6 +104,46 @@ function RestRing({
         </div>
       </div>
     </section>
+  );
+}
+
+// ── session warm-up / cooldown screens ──────────────────────────────
+// Static content only: not exercises, no sets, nothing saved. Exit stays
+// reachable so the phases never trap the user.
+function SessionPhaseScreen({
+  icon: Icon, title, body, actionLabel, actionIcon, onAction, onExit,
+}: {
+  icon: typeof Flame; title: string; body: string;
+  actionLabel: string; actionIcon: typeof Flag; onAction: () => void; onExit: () => void;
+}) {
+  return (
+    <div className="min-h-dvh bg-bg-base text-fg-primary flex flex-col">
+      <header className="sticky top-0 z-10 bg-bg-base/95 backdrop-blur border-b border-line-subtle" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <div className="mx-auto max-w-md px-4 py-3 flex items-center justify-between">
+          <button onClick={onExit} className="flex items-center gap-1 text-[14px] text-fg-secondary font-semibold">
+            <X className="h-4 w-4" /> Exit
+          </button>
+        </div>
+      </header>
+
+      <main className="flex-1 mx-auto w-full max-w-md px-5 pt-8 pb-40">
+        <div className="rounded-sheet bg-surface-card border border-line-subtle p-6 space-y-4">
+          <div className="w-10 h-10 rounded-control bg-action-primary-quiet flex items-center justify-center">
+            <Icon className="h-5 w-5 text-coral-300" />
+          </div>
+          <h1 className="font-display text-[28px] font-semibold leading-tight tracking-[-0.02em] text-fg-primary">{title}</h1>
+          <p className="text-[15px] leading-relaxed text-fg-secondary">{body}</p>
+        </div>
+      </main>
+
+      <div className="fixed bottom-0 inset-x-0 z-10 bg-bg-base/95 backdrop-blur border-t border-line-subtle pb-[env(safe-area-inset-bottom)]">
+        <div className="mx-auto max-w-md px-4 py-2.5">
+          <Button variant="accent" size="lg" fullWidth icon={actionIcon} onClick={onAction}>
+            {actionLabel}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -291,6 +331,12 @@ export default function Tracker({
   const [currentExIdx, setCurrentExIdx] = useState(0);
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [exerciseListOpen, setExerciseListOpen] = useState(false);
+  // local UI state only, never saved. Light/recovery sessions skip the warm-up,
+  // and so does a session already under way (startedAt is only set on first
+  // open) so resuming or reloading mid-workout doesn't replay it.
+  const [sessionPhase, setSessionPhase] = useState<'warmup' | 'exercises' | 'cooldown'>(() =>
+    !workout || workout.intensity === 'light' || workout.startedAt ? 'exercises' : 'warmup'
+  );
   const beepedFor = useRef<number | null>(null);
   const restDurationRef = useRef(90);
   const restKindRef = useRef<'rest' | 'transition'>('rest');
@@ -681,6 +727,37 @@ export default function Tracker({
     );
   }
 
+  // ── strength session: warm-up / cooldown screens ──────────────────
+  if (sessionPhase === 'warmup') {
+    return (
+      <SessionPhaseScreen
+        icon={Flame}
+        title="Warm up first"
+        body="5 minutes of light cardio and/or dynamic stretches to prime your body."
+        actionLabel="Start workout"
+        actionIcon={Play}
+        onAction={() => setSessionPhase('exercises')}
+        onExit={exit}
+      />
+    );
+  }
+  if (sessionPhase === 'cooldown') {
+    return (
+      <SessionPhaseScreen
+        icon={Wind}
+        title="Cool down"
+        body="A few minutes of light stretching to bring your heart rate down."
+        actionLabel="Finish workout"
+        actionIcon={Flag}
+        onAction={finish}
+        onExit={exit}
+      />
+    );
+  }
+
+  // light/recovery sessions finish immediately; everything else cools down first
+  const onFinishTap = () => (workout.intensity === 'light' ? finish() : setSessionPhase('cooldown'));
+
   // ── strength session: sets × reps ─────────────────────────────────
   return (
     <div className="min-h-dvh bg-bg-base text-fg-primary flex flex-col">
@@ -888,7 +965,7 @@ export default function Tracker({
               ))}
             </div>
           )}
-          <Button variant="accent" size="lg" fullWidth icon={Flag} iconAfter={ChevronRight} onClick={finish}>
+          <Button variant="accent" size="lg" fullWidth icon={Flag} iconAfter={ChevronRight} onClick={onFinishTap}>
             Finish workout
           </Button>
         </div>
