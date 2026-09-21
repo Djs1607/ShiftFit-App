@@ -108,30 +108,56 @@ function RestRing({
 }
 
 // ── session warm-up / cooldown screens ──────────────────────────────
-// Static content only: not exercises, no sets, nothing saved. Exit stays
-// reachable so the phases never trap the user.
-const WARMUP_MOVES = [
-  { name: 'March or jog in place', detail: '1 minute' },
-  { name: 'Arm circles', detail: '30 seconds each direction' },
-  { name: 'Bodyweight squats', detail: '15 reps' },
-  { name: 'Leg swings', detail: '10 each leg' },
-  { name: 'Torso twists', detail: '30 seconds' },
+// A guided checklist, not a gate: nothing here blocks the action button,
+// and nothing is saved. Item state is local to the screen (the caller keys
+// it by phase so it starts fresh each time). Countdowns reuse the parent's
+// 1s `now` tick against a stored end timestamp — no extra interval.
+type PrepItem = { id: string; name: string; seconds: number | null; reps: string | null; done: boolean };
+type PrepDef = Omit<PrepItem, 'done'> & { label: string | null };
+
+const WARMUP_ITEMS: PrepDef[] = [
+  { id: 'w1', name: 'March or jog in place', seconds: 60, reps: null, label: '1 min' },
+  { id: 'w2', name: 'Arm circles', seconds: 30, reps: null, label: '30s each direction' },
+  { id: 'w3', name: 'Bodyweight squats', seconds: null, reps: '15 reps', label: null },
+  { id: 'w4', name: 'Leg swings', seconds: null, reps: '10 each leg', label: null },
+  { id: 'w5', name: 'Torso twists', seconds: 30, reps: null, label: '30s' },
 ];
 
-const COOLDOWN_MOVES = [
-  { name: 'Standing quad stretch', detail: '30 seconds each leg' },
-  { name: 'Hamstring stretch', detail: '30 seconds each leg' },
-  { name: 'Chest and shoulder stretch', detail: '30 seconds each side' },
-  { name: 'Calf stretch', detail: '30 seconds each leg' },
-  { name: "Deep breathing / child's pose", detail: '1 minute' },
+const COOLDOWN_ITEMS: PrepDef[] = [
+  { id: 'c1', name: 'Standing quad stretch', seconds: 30, reps: null, label: '30s each leg' },
+  { id: 'c2', name: 'Hamstring stretch', seconds: 30, reps: null, label: '30s each leg' },
+  { id: 'c3', name: 'Chest and shoulder stretch', seconds: 30, reps: null, label: '30s each side' },
+  { id: 'c4', name: 'Calf stretch', seconds: 30, reps: null, label: '30s each leg' },
+  { id: 'c5', name: "Deep breathing / child's pose", seconds: 60, reps: null, label: '1 min' },
 ];
 
 function SessionPhaseScreen({
-  title, moves, actionLabel, actionIcon, onAction, onExit,
+  title, defs, now, actionLabel, actionIcon, onAction, onExit,
 }: {
-  title: string; moves: { name: string; detail: string }[];
+  title: string; defs: PrepDef[]; now: number;
   actionLabel: string; actionIcon: typeof Flag; onAction: () => void; onExit: () => void;
 }) {
+  const [items, setItems] = useState<PrepItem[]>(() => defs.map((d) => ({ id: d.id, name: d.name, seconds: d.seconds, reps: d.reps, done: false })));
+  const [timer, setTimer] = useState<{ id: string; end: number } | null>(null);
+
+  // timer reached zero: check the item off, beep, clear it
+  useEffect(() => {
+    if (timer && now >= timer.end) {
+      beep();
+      setItems((prev) => prev.map((i) => (i.id === timer.id ? { ...i, done: true } : i)));
+      setTimer(null);
+    }
+  }, [now, timer]);
+
+  const toggleDone = (id: string) => setItems((prev) => prev.map((i) => (i.id === id ? { ...i, done: !i.done } : i)));
+
+  // one timer at a time: starting another replaces it without touching done;
+  // tapping the running item again just stops it
+  const toggleTimer = (item: PrepItem) => {
+    if (item.seconds === null) return;
+    setTimer((t) => (t?.id === item.id ? null : { id: item.id, end: Date.now() + item.seconds! * 1000 }));
+  };
+
   return (
     <div className="min-h-dvh bg-bg-base text-fg-primary flex flex-col">
       <header className="sticky top-0 z-10 bg-bg-base/95 backdrop-blur border-b border-line-subtle" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
@@ -144,17 +170,46 @@ function SessionPhaseScreen({
 
       <main className="flex-1 mx-auto w-full max-w-md px-5 pt-12 pb-40">
         <h1 className="font-display text-[28px] font-semibold leading-tight tracking-[-0.02em] text-fg-primary">{title}</h1>
-        <ol className="mt-8 divide-y divide-line-subtle">
-          {moves.map((m, i) => (
-            <li key={m.name} className="flex items-baseline gap-4 py-5">
-              <span className="w-5 shrink-0 font-mono text-[13px] font-medium text-fg-tertiary">{i + 1}</span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[17px] font-medium leading-snug text-fg-primary">{m.name}</p>
-                <p className="mt-1 text-[14px] text-fg-tertiary">{m.detail}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
+        <ul className="mt-8 divide-y divide-line-subtle">
+          {items.map((item, i) => {
+            const running = timer?.id === item.id;
+            const remaining = running && item.seconds !== null
+              ? Math.min(item.seconds, Math.max(0, Math.ceil((timer.end - now) / 1000)))
+              : null;
+            return (
+              <li key={item.id} className="flex items-center gap-3 py-4">
+                <button
+                  onClick={() => toggleDone(item.id)}
+                  role="checkbox"
+                  aria-checked={item.done}
+                  aria-label={`Mark ${item.name} done`}
+                  className={`h-7 w-7 shrink-0 rounded-full flex items-center justify-center transition-colors duration-fast ease-standard ${
+                    item.done ? 'bg-action-accent' : 'border border-line-default bg-surface-raised'
+                  }`}
+                >
+                  <Check className={`h-4 w-4 ${item.done ? 'text-fg-onAccent' : 'text-transparent'}`} strokeWidth={3} />
+                </button>
+                <p className={`min-w-0 flex-1 text-[17px] font-medium leading-snug break-words${item.done ? 'text-fg-tertiary' : 'text-fg-primary'}`}>
+                  {item.name}
+                </p>
+                <span className={`min-w-0 max-w-[5.5rem] text-right text-[13px] leading-snug tabular-nums ${running ? 'text-fg-primary font-bold' : 'text-fg-tertiary'}`}>
+                  {running ? `${remaining}s` : (item.reps ?? defs[i].label)}
+                </span>
+                {item.seconds !== null ? (
+                  <button
+                    onClick={() => toggleTimer(item)}
+                    aria-label={running ? `Stop ${item.name} timer` : `Start ${item.name} timer`}
+                    className="h-9 w-9 shrink-0 rounded-control bg-surface-raised border border-line-default flex items-center justify-center text-fg-secondary active:scale-90 transition-transform"
+                  >
+                    {running ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                  </button>
+                ) : (
+                  <span aria-hidden className="h-9 w-9 shrink-0" />
+                )}
+              </li>
+            );
+          })}
+        </ul>
       </main>
 
       <div className="fixed bottom-0 inset-x-0 z-10 bg-bg-base/95 backdrop-blur border-t border-line-subtle pb-[env(safe-area-inset-bottom)]">
@@ -752,8 +807,10 @@ export default function Tracker({
   if (sessionPhase === 'warmup') {
     return (
       <SessionPhaseScreen
+        key="warmup"
         title="Warm up first"
-        moves={WARMUP_MOVES}
+        defs={WARMUP_ITEMS}
+        now={now}
         actionLabel="Start workout"
         actionIcon={Play}
         onAction={() => setSessionPhase('exercises')}
@@ -764,8 +821,10 @@ export default function Tracker({
   if (sessionPhase === 'cooldown') {
     return (
       <SessionPhaseScreen
+        key="cooldown"
         title="Cool down"
-        moves={COOLDOWN_MOVES}
+        defs={COOLDOWN_ITEMS}
+        now={now}
         actionLabel="Finish workout"
         actionIcon={Flag}
         onAction={finish}
