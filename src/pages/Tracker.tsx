@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Plus, Check, Trash2, Timer, Flag, Play, Pause, RotateCcw, Dumbbell, ChevronRight, ChevronLeft, SlidersHorizontal, Flame, Wind } from 'lucide-react';
+import { X, Plus, Check, Trash2, Timer, Flag, Play, Pause, RotateCcw, Dumbbell, ChevronRight, ChevronLeft, SlidersHorizontal } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { uid } from '../lib/storage';
 import { localISO } from '../lib/schedule';
@@ -110,10 +110,26 @@ function RestRing({
 // ── session warm-up / cooldown screens ──────────────────────────────
 // Static content only: not exercises, no sets, nothing saved. Exit stays
 // reachable so the phases never trap the user.
+const WARMUP_MOVES = [
+  { name: 'March or jog in place', detail: '1 minute' },
+  { name: 'Arm circles', detail: '30 seconds each direction' },
+  { name: 'Bodyweight squats', detail: '15 reps' },
+  { name: 'Leg swings', detail: '10 each leg' },
+  { name: 'Torso twists', detail: '30 seconds' },
+];
+
+const COOLDOWN_MOVES = [
+  { name: 'Standing quad stretch', detail: '30 seconds each leg' },
+  { name: 'Hamstring stretch', detail: '30 seconds each leg' },
+  { name: 'Chest and shoulder stretch', detail: '30 seconds each side' },
+  { name: 'Calf stretch', detail: '30 seconds each leg' },
+  { name: "Deep breathing / child's pose", detail: '1 minute' },
+];
+
 function SessionPhaseScreen({
-  icon: Icon, title, body, actionLabel, actionIcon, onAction, onExit,
+  title, moves, actionLabel, actionIcon, onAction, onExit,
 }: {
-  icon: typeof Flame; title: string; body: string;
+  title: string; moves: { name: string; detail: string }[];
   actionLabel: string; actionIcon: typeof Flag; onAction: () => void; onExit: () => void;
 }) {
   return (
@@ -126,14 +142,19 @@ function SessionPhaseScreen({
         </div>
       </header>
 
-      <main className="flex-1 mx-auto w-full max-w-md px-5 pt-8 pb-40">
-        <div className="rounded-sheet bg-surface-card border border-line-subtle p-6 space-y-4">
-          <div className="w-10 h-10 rounded-control bg-action-primary-quiet flex items-center justify-center">
-            <Icon className="h-5 w-5 text-coral-300" />
-          </div>
-          <h1 className="font-display text-[28px] font-semibold leading-tight tracking-[-0.02em] text-fg-primary">{title}</h1>
-          <p className="text-[15px] leading-relaxed text-fg-secondary">{body}</p>
-        </div>
+      <main className="flex-1 mx-auto w-full max-w-md px-5 pt-12 pb-40">
+        <h1 className="font-display text-[28px] font-semibold leading-tight tracking-[-0.02em] text-fg-primary">{title}</h1>
+        <ol className="mt-8 divide-y divide-line-subtle">
+          {moves.map((m, i) => (
+            <li key={m.name} className="flex items-baseline gap-4 py-5">
+              <span className="w-5 shrink-0 font-mono text-[13px] font-medium text-fg-tertiary">{i + 1}</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[17px] font-medium leading-snug text-fg-primary">{m.name}</p>
+                <p className="mt-1 text-[14px] text-fg-tertiary">{m.detail}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
       </main>
 
       <div className="fixed bottom-0 inset-x-0 z-10 bg-bg-base/95 backdrop-blur border-t border-line-subtle pb-[env(safe-area-inset-bottom)]">
@@ -731,9 +752,8 @@ export default function Tracker({
   if (sessionPhase === 'warmup') {
     return (
       <SessionPhaseScreen
-        icon={Flame}
         title="Warm up first"
-        body="5 minutes of light cardio and/or dynamic stretches to prime your body."
+        moves={WARMUP_MOVES}
         actionLabel="Start workout"
         actionIcon={Play}
         onAction={() => setSessionPhase('exercises')}
@@ -744,9 +764,8 @@ export default function Tracker({
   if (sessionPhase === 'cooldown') {
     return (
       <SessionPhaseScreen
-        icon={Wind}
         title="Cool down"
-        body="A few minutes of light stretching to bring your heart rate down."
+        moves={COOLDOWN_MOVES}
         actionLabel="Finish workout"
         actionIcon={Flag}
         onAction={finish}
