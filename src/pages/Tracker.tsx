@@ -6,6 +6,7 @@ import { localISO } from '../lib/schedule';
 import { WORKOUT_LIBRARY } from '../lib/library';
 import { Button, ListRow, MetricTile, Stepper } from '../components/ds';
 import type { Workout, WorkoutExercise, WorkoutSet } from '../lib/types';
+import type { RestTimer } from '../lib/restTimer';
 
 const REST_OPTIONS = [30, 60, 90, 120, 180];
 const CARDIO_TYPES = new Set(['Run', 'Walk', 'Cycle', 'Swim', 'Cardio', 'Row']);
@@ -397,14 +398,13 @@ function CustomizeExerciseSheet({
 }
 
 export default function Tracker({
-  workoutId, onExit, onFinished,
-}: { workoutId: string; onExit: () => void; onFinished: () => void }) {
+  workoutId, restTimer, onExit, onFinished,
+}: { workoutId: string; restTimer: RestTimer; onExit: () => void; onFinished: () => void }) {
   const { userWorkouts, userCustomWorkouts, dispatch } = useStore();
   const workout = userWorkouts.find((w) => w.id === workoutId);
 
   const [now, setNow] = useState(Date.now());
-  const [restSecs, setRestSecs] = useState(90);
-  const [restEnd, setRestEnd] = useState<number | null>(null);
+  const { restSecs, setRestSecs, restEnd, restDuration, restKind } = restTimer;
   const [newEx, setNewEx] = useState('');
   const [summary, setSummary] = useState<{ min: number; volume: number; sets: number; goal?: number } | null>(null);
   const [currentExIdx, setCurrentExIdx] = useState(0);
@@ -416,9 +416,6 @@ export default function Tracker({
   const [sessionPhase, setSessionPhase] = useState<'warmup' | 'exercises' | 'cooldown'>(() =>
     !workout || workout.intensity === 'light' || workout.startedAt ? 'exercises' : 'warmup'
   );
-  const beepedFor = useRef<number | null>(null);
-  const restDurationRef = useRef(90);
-  const restKindRef = useRef<'rest' | 'transition'>('rest');
 
   // cardio countdown state
   const [targetMin, setTargetMin] = useState<number | null>(null);
@@ -442,10 +439,8 @@ export default function Tracker({
   // now fully done (this is the only path that auto-advances silently —
   // it means the user was already sitting through a rest countdown)
   useEffect(() => {
-    if (restEnd && now >= restEnd && beepedFor.current !== restEnd) {
-      beepedFor.current = restEnd;
+    if (restEnd && now >= restEnd && restTimer.expire()) {
       beep();
-      setRestEnd(null);
       const exs = workout?.exercises ?? [];
       const idx = Math.min(currentExIdx, Math.max(0, exs.length - 1));
       const ex = exs[idx];
@@ -454,7 +449,7 @@ export default function Tracker({
         setCurrentExIdx(idx + 1);
       }
     }
-  }, [now, restEnd, workout, currentExIdx]);
+  }, [now, restEnd, restTimer, workout, currentExIdx]);
 
   // cardio countdown completion
   useEffect(() => {
@@ -564,19 +559,11 @@ export default function Tracker({
     const done = !set.done;
     setSet(exId, idx, { done });
     if (done) {
-      beepedFor.current = null;
       // single-arm: the left side of a pair gets a short fixed transition
       // to switch sides (not the user's chosen rest duration); only the
       // right entry starts the normal rest timer
-      if (set.side === 'left') {
-        restKindRef.current = 'transition';
-        restDurationRef.current = 10;
-        setRestEnd(Date.now() + 10 * 1000);
-      } else {
-        restKindRef.current = 'rest';
-        restDurationRef.current = restSecs;
-        setRestEnd(Date.now() + restSecs * 1000);
-      }
+      if (set.side === 'left') restTimer.start('transition', 10);
+      else restTimer.start('rest', restSecs);
 
       // that was the exercise's final set → auto-advance the view to the
       // next exercise shortly after, giving the checkmark a moment to
@@ -628,12 +615,12 @@ export default function Tracker({
   const finish = () => {
     const min = Math.max(1, Math.round(elapsedSec / 60));
     save({ completed: true, finishedAt: localISO(new Date()), durationMin: min });
-    setRestEnd(null);
+    restTimer.clear();
     setSummary({ min, volume: stats.volume, sets: stats.sets, goal: isCardio ? (targetMin ?? workout.durationMin) : undefined });
   };
 
-  const skipRest = () => { beepedFor.current = null; setRestEnd(null); };
-  const adjustRest = (deltaMs: number) => setRestEnd((r) => (r ? Math.max(now + 1000, r + deltaMs) : r));
+  const skipRest = () => restTimer.clear();
+  const adjustRest = (deltaMs: number) => restTimer.adjust(deltaMs, now);
 
   // ── completion summary ────────────────────────────────────────────
   if (summary) {
@@ -868,7 +855,7 @@ export default function Tracker({
       {restLeft !== null && (
         <div className="fixed inset-x-0 top-24 z-30 flex justify-center px-4 pointer-events-none">
           <div className="w-full max-w-md pointer-events-auto">
-            <RestRing restLeft={restLeft} restDuration={restDurationRef.current} variant={restKindRef.current} onAdjust={adjustRest} onSkip={skipRest} />
+            <RestRing restLeft={restLeft} restDuration={restDuration} variant={restKind} onAdjust={adjustRest} onSkip={skipRest} />
           </div>
         </div>
       )}

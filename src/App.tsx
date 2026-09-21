@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { Dumbbell, UserRound, LayoutDashboard, TrendingUp } from 'lucide-react';
 import { StoreProvider, useStore } from './lib/store';
 import { load, save } from './lib/storage';
+import { useRestTimer } from './lib/restTimer';
 import { TabBar, type TabBarItem } from './components/ds';
 import Onboarding from './pages/Onboarding';
 import Auth from './pages/Auth';
@@ -33,6 +34,7 @@ function Shell() {
   const { user, userWorkouts } = useStore();
   const [tab, setTab] = useState<Tab>('today');
   const [trackingId, setTrackingId] = useState<string | null>(null);
+  const restTimer = useRestTimer();
   const [onboarded, setOnboarded] = useState(true);
 
   // first-run gate: show onboarding until this user completes/skips it.
@@ -65,8 +67,9 @@ function Shell() {
     return (
       <Tracker
         workoutId={liveId}
-        onExit={() => setTrackingId(null)}
-        onFinished={() => { setTrackingId(null); setTab('progress'); }}
+        restTimer={restTimer}
+        onExit={() => { restTimer.reset(); setTrackingId(null); }}
+        onFinished={() => { restTimer.reset(); setTrackingId(null); setTab('progress'); }}
       />
     );
   }
