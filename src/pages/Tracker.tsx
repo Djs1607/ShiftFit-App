@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Plus, Check, Trash2, Timer, Flag, Play, Pause, RotateCcw, Dumbbell, ChevronRight, ChevronLeft, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { X, Plus, Check, Trash2, Timer, Flag, Play, Pause, RotateCcw, Dumbbell, ChevronRight, ChevronLeft, SlidersHorizontal, ChevronDown, Search } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { uid } from '../lib/storage';
 import { localISO } from '../lib/schedule';
 import { WORKOUT_LIBRARY } from '../lib/library';
 import { Button, ListRow, MetricTile, Stepper } from '../components/ds';
+import { ExercisePicker } from '../components/ExercisePicker';
 import type { Workout, WorkoutExercise, WorkoutSet } from '../lib/types';
 import type { RestTimer } from '../lib/restTimer';
 import type { SessionView } from '../lib/sessionView';
@@ -406,6 +407,7 @@ export default function Tracker({
   const [summary, setSummary] = useState<{ min: number; volume: number; sets: number; goal?: number } | null>(null);
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [exerciseListOpen, setExerciseListOpen] = useState(false);
+  const [exercisePickerOpen, setExercisePickerOpen] = useState(false);
 
   // cardio countdown state
   const [targetMin, setTargetMin] = useState<number | null>(null);
@@ -592,14 +594,22 @@ export default function Tracker({
 
   const removeExercise = (exId: string) => save({ exercises: exercises.filter((e) => e.id !== exId) });
 
-  const addExercise = () => {
-    const name = newEx.trim();
-    if (!name) return;
+  // shared by the free-text input and the exercise picker, so both add an
+  // exercise the exact same way — same suggested weight/reps, and the
+  // single-arm/dumbbell heuristics apply identically either way since both
+  // just resolve to a name
+  const addExerciseNamed = (name: string) => {
     const last = lastPerf(name);
     const base = { reps: last?.reps ?? 10, weightKg: last?.weightKg ?? 0 };
     save({
       exercises: [...exercises, { id: uid(), name, sets: makeSets(1, base, isSingleArmExercise(name)) }],
     });
+  };
+
+  const addExercise = () => {
+    const name = newEx.trim();
+    if (!name) return;
+    addExerciseNamed(name);
     setNewEx('');
   };
 
@@ -1003,6 +1013,12 @@ export default function Tracker({
             <Plus className="h-5 w-5" />
           </button>
         </div>
+        <button
+          onClick={() => setExercisePickerOpen(true)}
+          className="w-full rounded-control border border-dashed border-line-strong py-2.5 text-[12px] font-semibold text-fg-tertiary hover:bg-surface-hover flex items-center justify-center gap-1.5"
+        >
+          <Search className="h-3.5 w-3.5" /> Browse exercises
+        </button>
 
         {currentEx && (
           <button
@@ -1059,6 +1075,13 @@ export default function Tracker({
         onSelectExercise={(idx) => setCurrentExIdx(idx)}
         onCustomize={() => {}}
       />
+
+      {exercisePickerOpen && (
+        <ExercisePicker
+          onSelect={(exercise) => { addExerciseNamed(exercise.name); setExercisePickerOpen(false); }}
+          onClose={() => setExercisePickerOpen(false)}
+        />
+      )}
     </div>
   );
 }
