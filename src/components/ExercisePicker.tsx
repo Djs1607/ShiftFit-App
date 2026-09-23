@@ -24,15 +24,18 @@ function ResultThumb() {
 
 // The caller should only mount this while open (e.g. `{open && <ExercisePicker ... />}`)
 // rather than always rendering it with a visibility flag — that way each open
-// starts with a clean search/filter instead of carrying the last visit's over.
+// starts with a clean search/filter instead of carrying the last visit's over
+// (and any `initialMuscle` below is re-applied fresh on every open too).
 export function ExercisePicker({
-  onSelect, onClose,
+  mode = 'add', initialMuscle = null, onSelect, onClose,
 }: {
+  mode?: 'add' | 'swap';
+  initialMuscle?: string | null;
   onSelect: (exercise: Exercise) => void;
   onClose: () => void;
 }) {
   const [query, setQuery] = useState('');
-  const [muscle, setMuscle] = useState<string | null>(null);
+  const [muscle, setMuscle] = useState<string | null>(initialMuscle);
 
   const results = useMemo(() => {
     const byQuery = searchExercises(query);
@@ -47,7 +50,9 @@ export function ExercisePicker({
       style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="flex items-center justify-between px-5 pt-5 max-w-md mx-auto w-full shrink-0">
-        <h1 className="font-display text-[19px] font-semibold text-fg-primary">Browse Exercises</h1>
+        <h1 className="font-display text-[19px] font-semibold text-fg-primary">
+          {mode === 'swap' ? 'Swap Exercise' : 'Browse Exercises'}
+        </h1>
         <button onClick={onClose} className="text-[14px] font-semibold text-fg-secondary">Close</button>
       </div>
 

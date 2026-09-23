@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Plus, Check, Trash2, Timer, Flag, Play, Pause, RotateCcw, Dumbbell, ChevronRight, ChevronLeft, SlidersHorizontal, ChevronDown, Search } from 'lucide-react';
+import { X, Plus, Check, Trash2, Timer, Flag, Play, Pause, RotateCcw, Dumbbell, ChevronRight, ChevronLeft, SlidersHorizontal, ChevronDown, Search, Repeat } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { uid } from '../lib/storage';
 import { localISO } from '../lib/schedule';
 import { WORKOUT_LIBRARY } from '../lib/library';
 import { Button, ListRow, MetricTile, Stepper } from '../components/ds';
 import { ExercisePicker } from '../components/ExercisePicker';
+import { ALL_EXERCISES } from '../lib/exerciseDatabase';
 import type { Workout, WorkoutExercise, WorkoutSet } from '../lib/types';
 import type { RestTimer } from '../lib/restTimer';
 import type { SessionView } from '../lib/sessionView';
@@ -354,7 +355,7 @@ function ExerciseListOverlay({
 // (backdrop, slide-up panel, escape-to-close) — content differs so it's
 // its own component rather than reusing ConfirmSheet directly.
 function CustomizeExerciseSheet({
-  open, exName, value, min, max, onChange, onClose,
+  open, exName, value, min, max, onChange, onSwap, onClose,
 }: {
   open: boolean;
   exName: string;
@@ -362,6 +363,7 @@ function CustomizeExerciseSheet({
   min: number;
   max: number;
   onChange: (v: number) => void;
+  onSwap: () => void;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -388,7 +390,8 @@ function CustomizeExerciseSheet({
           {exName}
         </p>
         <Stepper value={value} min={min} max={max} unit="sets" onChange={onChange} className="mt-4" />
-        <div className="mt-5">
+        <div className="mt-5 space-y-2.5">
+          <Button variant="secondary" size="lg" fullWidth icon={Repeat} onClick={onSwap}>Swap exercise</Button>
           <Button variant="primary" size="lg" fullWidth onClick={onClose}>Done</Button>
         </div>
       </div>
@@ -410,6 +413,9 @@ export default function Tracker({
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [exerciseListOpen, setExerciseListOpen] = useState(false);
   const [exercisePickerOpen, setExercisePickerOpen] = useState(false);
+  // set only when the picker was opened via "Swap exercise"; the same
+  // exercise id is replaced in place on selection instead of adding a new one
+  const [swapTarget, setSwapTarget] = useState<{ exerciseId: string; initialMuscle: string | null } | null>(null);
 
   // cardio countdown state
   const [targetMin, setTargetMin] = useState<number | null>(null);
@@ -613,6 +619,20 @@ export default function Tracker({
     if (!name) return;
     addExerciseNamed(name);
     setNewEx('');
+  };
+
+  // swap: full replacement in place — same id/position, new name, sets reset
+  // to fresh defaults via the same seeding logic as the add-paths. Any
+  // progress on the exercise being replaced (done sets, warm-up sets,
+  // customized set count) is intentionally discarded, not carried over.
+  const replaceExercise = (exId: string, name: string) => {
+    const last = lastPerf(name);
+    const base = { reps: last?.reps ?? 10, weightKg: last?.weightKg ?? 0 };
+    save({
+      exercises: exercises.map((e) =>
+        e.id !== exId ? e : { ...e, name, sets: makeSets(1, base, isSingleArmExercise(name)) }
+      ),
+    });
   };
 
   const finish = () => {
@@ -1016,7 +1036,7 @@ export default function Tracker({
           </button>
         </div>
         <button
-          onClick={() => setExercisePickerOpen(true)}
+          onClick={() => { setSwapTarget(null); setExercisePickerOpen(true); }}
           className="w-full rounded-control border border-dashed border-line-strong py-2.5 text-[12px] font-semibold text-fg-tertiary hover:bg-surface-hover flex items-center justify-center gap-1.5"
         >
           <Search className="h-3.5 w-3.5" /> Browse exercises
@@ -1066,6 +1086,13 @@ export default function Tracker({
           if (v > currentEx.sets.length) addSet(currentEx.id);
           else if (v < currentEx.sets.length) removeSet(currentEx.id);
         }}
+        onSwap={() => {
+          if (!currentEx) return;
+          setCustomizeOpen(false);
+          const match = ALL_EXERCISES.find((e) => e.name.toLowerCase() === currentEx.name.toLowerCase());
+          setSwapTarget({ exerciseId: currentEx.id, initialMuscle: match?.primaryMuscles[0] ?? null });
+          setExercisePickerOpen(true);
+        }}
         onClose={() => setCustomizeOpen(false)}
       />
 
@@ -1080,8 +1107,15 @@ export default function Tracker({
 
       {exercisePickerOpen && (
         <ExercisePicker
-          onSelect={(exercise) => { addExerciseNamed(exercise.name); setExercisePickerOpen(false); }}
-          onClose={() => setExercisePickerOpen(false)}
+          mode={swapTarget ? 'swap' : 'add'}
+          initialMuscle={swapTarget?.initialMuscle ?? null}
+          onSelect={(exercise) => {
+            if (swapTarget) replaceExercise(swapTarget.exerciseId, exercise.name);
+            else addExerciseNamed(exercise.name);
+            setExercisePickerOpen(false);
+            setSwapTarget(null);
+          }}
+          onClose={() => { setExercisePickerOpen(false); setSwapTarget(null); }}
         />
       )}
     </div>
