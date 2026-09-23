@@ -16,8 +16,10 @@ const CARDIO_TYPES = new Set(['Run', 'Walk', 'Cycle', 'Swim', 'Cardio', 'Row']);
 const DURATION_CHIPS = [5, 10, 15, 20, 30, 45, 60];
 
 // same heuristic style as the dumbbell-label check: case-insensitive
-// substring match on the exercise name, nothing fancier
-const isSingleArmExercise = (name: string) => /single arm|one arm|unilateral/i.test(name);
+// substring match on the exercise name, nothing fancier — real exercise
+// names mix "One-Arm", "One Arm", "Single-Leg" etc., so space and hyphen
+// are treated interchangeably as the separator
+const isSingleArmExercise = (name: string) => /(single|one)[\s-]+(arm|leg)|unilateral/i.test(name);
 
 function makeSets(count: number, base: { reps: number; weightKg: number }, singleArm: boolean): WorkoutSet[] {
   if (!singleArm) return Array.from({ length: count }, () => ({ ...base, done: false }));
