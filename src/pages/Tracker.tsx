@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Plus, Check, Trash2, Timer, Flag, Play, Pause, RotateCcw, Dumbbell, ChevronRight, ChevronLeft, SlidersHorizontal, ChevronDown, Search, Repeat } from 'lucide-react';
+import { X, Plus, Check, Trash2, Timer, Flag, Play, Pause, RotateCcw, Dumbbell, ChevronRight, ChevronLeft, SlidersHorizontal, ChevronDown, Repeat } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { uid } from '../lib/storage';
 import { localISO } from '../lib/schedule';
@@ -251,24 +251,27 @@ function ExerciseThumb({ done }: { done: boolean }) {
   );
 }
 
+// The caller should only mount this while open (e.g. `{open && <ExerciseListOverlay ... />}`),
+// same reasoning as ExercisePicker — that way `customizeMode` always starts
+// fresh instead of carrying the toggle over from a previous visit.
 function ExerciseListOverlay({
-  open, exercises, currentExIdx, onClose, onSelectExercise, onCustomize,
+  exercises, currentExIdx, onClose, onSelectExercise, onCustomizeExercise, onDeleteExercise, onAddExercise,
 }: {
-  open: boolean;
   exercises: WorkoutExercise[];
   currentExIdx: number;
   onClose: () => void;
   onSelectExercise: (idx: number) => void;
-  onCustomize: () => void;
+  onCustomizeExercise: (exId: string) => void;
+  onDeleteExercise: (exId: string) => void;
+  onAddExercise: () => void;
 }) {
+  const [customizeMode, setCustomizeMode] = useState(false);
+
   useEffect(() => {
-    if (!open) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
-
-  if (!open) return null;
+  }, [onClose]);
 
   const current = exercises[currentExIdx];
   const isDone = (ex: WorkoutExercise) => ex.sets.length > 0 && ex.sets.every((s) => s.done);
@@ -278,6 +281,27 @@ function ExerciseListOverlay({
   // jumping ahead to a later exercise must not drop earlier undone ones
   const next = exercises.filter((ex) => ex.id !== current?.id && !isDone(ex));
 
+  // while managing the list, every row shows customize/delete icons instead
+  // of navigating — tapping the row body does nothing in this mode
+  const rowIcons = (ex: WorkoutExercise) => customizeMode && (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={(e) => { e.stopPropagation(); onCustomizeExercise(ex.id); }}
+        aria-label={`Customize ${ex.name}`}
+        className="p-1.5 text-fg-tertiary hover:text-fg-primary"
+      >
+        <SlidersHorizontal className="h-4 w-4" />
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); onDeleteExercise(ex.id); }}
+        aria-label={`Remove ${ex.name}`}
+        className="p-1.5 text-fg-disabled hover:text-feedback-danger"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+    </div>
+  );
+
   return (
     <div
       className="fixed inset-0 z-40 flex flex-col bg-bg-base text-fg-primary"
@@ -285,7 +309,9 @@ function ExerciseListOverlay({
     >
       <div className="flex items-center justify-between px-5 pt-5 max-w-md mx-auto w-full shrink-0">
         <button onClick={onClose} className="text-[14px] font-semibold text-fg-secondary">Close</button>
-        <button onClick={onCustomize} className="text-[14px] font-semibold text-action-accent">Customize</button>
+        <button onClick={() => setCustomizeMode((v) => !v)} className="text-[14px] font-semibold text-action-accent">
+          {customizeMode ? 'Done' : 'Customize'}
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 py-6 max-w-md mx-auto w-full space-y-6">
@@ -301,6 +327,7 @@ function ExerciseListOverlay({
                     title={ex.name}
                     subtitle={ex.sets.map((s) => `${s.weightKg} x ${s.reps}`).join(' | ')}
                     leading={<ExerciseThumb done />}
+                    trailing={rowIcons(ex)}
                     chevron={false}
                   />
                 </li>
@@ -318,6 +345,7 @@ function ExerciseListOverlay({
                   title={current.name}
                   subtitle={fmtSetRange(current.sets)}
                   leading={<ExerciseThumb done={isDone(current)} />}
+                  trailing={rowIcons(current)}
                   chevron={false}
                 />
               </li>
@@ -337,7 +365,9 @@ function ExerciseListOverlay({
                       title={ex.name}
                       subtitle={fmtSetRange(ex.sets)}
                       leading={<ExerciseThumb done={false} />}
-                      onClick={() => { onSelectExercise(idx); onClose(); }}
+                      trailing={rowIcons(ex)}
+                      chevron={!customizeMode}
+                      onClick={customizeMode ? undefined : () => { onSelectExercise(idx); onClose(); }}
                     />
                   </li>
                 );
@@ -345,15 +375,27 @@ function ExerciseListOverlay({
             </ul>
           </section>
         )}
+
+        {customizeMode && (
+          <button
+            onClick={onAddExercise}
+            className="w-full rounded-control border border-dashed border-line-strong py-2.5 text-[12px] font-semibold text-fg-tertiary hover:bg-surface-hover flex items-center justify-center gap-1.5"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add exercise
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
 // ── customise-exercise sheet ────────────────────────────────────────
-// Set-count editor for the active exercise. Same shell as ConfirmSheet
-// (backdrop, slide-up panel, escape-to-close) — content differs so it's
-// its own component rather than reusing ConfirmSheet directly.
+// Set-count editor for whichever exercise it's opened for — not tied to
+// the active one, since it can be opened from any row in the Exercise
+// List overlay. Same shell as ConfirmSheet (backdrop, slide-up panel,
+// escape-to-close) — content differs so it's its own component rather
+// than reusing ConfirmSheet directly. z-50 (above the overlay's z-40)
+// since it can now be opened while that overlay stays open behind it.
 function CustomizeExerciseSheet({
   open, exName, value, min, max, onChange, onSwap, onClose,
 }: {
@@ -376,7 +418,7 @@ function CustomizeExerciseSheet({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <div className="absolute inset-0 bg-bg-scrim" onClick={onClose} aria-hidden />
       <div
         role="dialog"
@@ -410,7 +452,10 @@ export default function Tracker({
   const { currentExIdx, setCurrentExIdx, sessionPhase, setSessionPhase } = session;
   const [newEx, setNewEx] = useState('');
   const [summary, setSummary] = useState<{ min: number; volume: number; sets: number; goal?: number } | null>(null);
-  const [customizeOpen, setCustomizeOpen] = useState(false);
+  // id of whichever exercise the customize sheet is open for — not
+  // necessarily the current one, since it can now be opened from any row
+  // in the Exercise List overlay
+  const [customizeTargetId, setCustomizeTargetId] = useState<string | null>(null);
   const [exerciseListOpen, setExerciseListOpen] = useState(false);
   const [exercisePickerOpen, setExercisePickerOpen] = useState(false);
   // set only when the picker was opened via "Swap exercise"; the same
@@ -531,8 +576,7 @@ export default function Tracker({
   // clamp for read/nav so an out-of-range index (e.g. after removeExercise) self-heals without a setState-in-effect
   const safeExIdx = Math.min(currentExIdx, Math.max(0, exercises.length - 1));
   const currentEx = exercises[safeExIdx];
-  const currentDoneCount = currentEx ? currentEx.sets.filter((s) => s.done).length : 0;
-  const currentTotalSets = currentEx ? currentEx.sets.length : 0;
+  const customizeTargetEx = exercises.find((e) => e.id === customizeTargetId);
 
   // if the workout vanished mid-session (deleted elsewhere), leave
   useEffect(() => {
@@ -1035,21 +1079,6 @@ export default function Tracker({
             <Plus className="h-5 w-5" />
           </button>
         </div>
-        <button
-          onClick={() => { setSwapTarget(null); setExercisePickerOpen(true); }}
-          className="w-full rounded-control border border-dashed border-line-strong py-2.5 text-[12px] font-semibold text-fg-tertiary hover:bg-surface-hover flex items-center justify-center gap-1.5"
-        >
-          <Search className="h-3.5 w-3.5" /> Browse exercises
-        </button>
-
-        {currentEx && (
-          <button
-            onClick={() => setCustomizeOpen(true)}
-            className="w-full rounded-control border border-dashed border-line-strong py-2.5 text-[12px] font-semibold text-fg-tertiary hover:bg-surface-hover flex items-center justify-center gap-1.5"
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" /> Customise exercise
-          </button>
-        )}
       </main>
 
       {/* bottom: rest presets (when not resting) + finish */}
@@ -1076,34 +1105,37 @@ export default function Tracker({
       </div>
 
       <CustomizeExerciseSheet
-        open={customizeOpen && !!currentEx}
-        exName={currentEx?.name ?? ''}
-        value={currentTotalSets}
-        min={currentDoneCount}
+        open={!!customizeTargetEx}
+        exName={customizeTargetEx?.name ?? ''}
+        value={customizeTargetEx?.sets.length ?? 0}
+        min={customizeTargetEx ? customizeTargetEx.sets.filter((s) => s.done).length : 0}
         max={20}
         onChange={(v) => {
-          if (!currentEx) return;
-          if (v > currentEx.sets.length) addSet(currentEx.id);
-          else if (v < currentEx.sets.length) removeSet(currentEx.id);
+          if (!customizeTargetEx) return;
+          if (v > customizeTargetEx.sets.length) addSet(customizeTargetEx.id);
+          else if (v < customizeTargetEx.sets.length) removeSet(customizeTargetEx.id);
         }}
         onSwap={() => {
-          if (!currentEx) return;
-          setCustomizeOpen(false);
-          const match = ALL_EXERCISES.find((e) => e.name.toLowerCase() === currentEx.name.toLowerCase());
-          setSwapTarget({ exerciseId: currentEx.id, initialMuscle: match?.primaryMuscles[0] ?? null });
+          if (!customizeTargetEx) return;
+          setCustomizeTargetId(null);
+          const match = ALL_EXERCISES.find((e) => e.name.toLowerCase() === customizeTargetEx.name.toLowerCase());
+          setSwapTarget({ exerciseId: customizeTargetEx.id, initialMuscle: match?.primaryMuscles[0] ?? null });
           setExercisePickerOpen(true);
         }}
-        onClose={() => setCustomizeOpen(false)}
+        onClose={() => setCustomizeTargetId(null)}
       />
 
-      <ExerciseListOverlay
-        open={exerciseListOpen}
-        exercises={exercises}
-        currentExIdx={safeExIdx}
-        onClose={() => setExerciseListOpen(false)}
-        onSelectExercise={(idx) => setCurrentExIdx(idx)}
-        onCustomize={() => {}}
-      />
+      {exerciseListOpen && (
+        <ExerciseListOverlay
+          exercises={exercises}
+          currentExIdx={safeExIdx}
+          onClose={() => setExerciseListOpen(false)}
+          onSelectExercise={(idx) => setCurrentExIdx(idx)}
+          onCustomizeExercise={(exId) => setCustomizeTargetId(exId)}
+          onDeleteExercise={(exId) => removeExercise(exId)}
+          onAddExercise={() => { setSwapTarget(null); setExercisePickerOpen(true); }}
+        />
+      )}
 
       {exercisePickerOpen && (
         <ExercisePicker
