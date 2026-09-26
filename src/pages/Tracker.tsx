@@ -227,6 +227,11 @@ function SessionPhaseScreen({
   );
 }
 
+// shared by the Exercise List overlay's Completed/Current/Next grouping and
+// the customize sheet's swap restriction, so "fully completed" means the
+// same thing in both places
+const isExerciseDone = (ex: WorkoutExercise) => ex.sets.length > 0 && ex.sets.every((s) => s.done);
+
 // ── exercise list overview ──────────────────────────────────────────
 // Full-screen overlay (same shell as WalkthroughOverlay: fixed inset-0,
 // safe-area padding, Close/action header) rather than the bottom sheets
@@ -274,12 +279,11 @@ function ExerciseListOverlay({
   }, [onClose]);
 
   const current = exercises[currentExIdx];
-  const isDone = (ex: WorkoutExercise) => ex.sets.length > 0 && ex.sets.every((s) => s.done);
-  const completed = exercises.filter((ex) => ex.id !== current?.id && isDone(ex));
+  const completed = exercises.filter((ex) => ex.id !== current?.id && isExerciseDone(ex));
   // every not-yet-done exercise other than the current one, in original
   // order — NOT limited to array positions after currentExIdx, since
   // jumping ahead to a later exercise must not drop earlier undone ones
-  const next = exercises.filter((ex) => ex.id !== current?.id && !isDone(ex));
+  const next = exercises.filter((ex) => ex.id !== current?.id && !isExerciseDone(ex));
 
   // while managing the list, every row shows customize/delete icons instead
   // of navigating — tapping the row body does nothing in this mode
@@ -344,7 +348,7 @@ function ExerciseListOverlay({
                 <ListRow
                   title={current.name}
                   subtitle={fmtSetRange(current.sets)}
-                  leading={<ExerciseThumb done={isDone(current)} />}
+                  leading={<ExerciseThumb done={isExerciseDone(current)} />}
                   trailing={rowIcons(current)}
                   chevron={false}
                 />
@@ -397,7 +401,7 @@ function ExerciseListOverlay({
 // than reusing ConfirmSheet directly. z-50 (above the overlay's z-40)
 // since it can now be opened while that overlay stays open behind it.
 function CustomizeExerciseSheet({
-  open, exName, value, min, max, onChange, onSwap, onClose,
+  open, exName, value, min, max, onChange, canSwap, onSwap, onClose,
 }: {
   open: boolean;
   exName: string;
@@ -405,6 +409,7 @@ function CustomizeExerciseSheet({
   min: number;
   max: number;
   onChange: (v: number) => void;
+  canSwap: boolean;
   onSwap: () => void;
   onClose: () => void;
 }) {
@@ -433,7 +438,9 @@ function CustomizeExerciseSheet({
         </p>
         <Stepper value={value} min={min} max={max} unit="sets" onChange={onChange} className="mt-4" />
         <div className="mt-5 space-y-2.5">
-          <Button variant="secondary" size="lg" fullWidth icon={Repeat} onClick={onSwap}>Swap exercise</Button>
+          {canSwap && (
+            <Button variant="secondary" size="lg" fullWidth icon={Repeat} onClick={onSwap}>Swap exercise</Button>
+          )}
           <Button variant="primary" size="lg" fullWidth onClick={onClose}>Done</Button>
         </div>
       </div>
@@ -1115,6 +1122,7 @@ export default function Tracker({
           if (v > customizeTargetEx.sets.length) addSet(customizeTargetEx.id);
           else if (v < customizeTargetEx.sets.length) removeSet(customizeTargetEx.id);
         }}
+        canSwap={!!customizeTargetEx && !isExerciseDone(customizeTargetEx)}
         onSwap={() => {
           if (!customizeTargetEx) return;
           setCustomizeTargetId(null);
