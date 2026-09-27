@@ -6,6 +6,7 @@
 
 import { Activity, BatteryLow, Dumbbell, Moon, Zap } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import type { Workout } from './types';
 
 export interface TrainingPlan {
   id: string;
@@ -16,6 +17,31 @@ export interface TrainingPlan {
   description: string;
   icon: LucideIcon;
   sessionTemplate: string[]; // WORKOUT_LIBRARY ids, length === sessionsPerWeek
+}
+
+export interface PlanProgress {
+  week: number;
+  totalSessions: number;
+  completedSessions: number;
+  pct: number;
+  nextIndex: number; // into sessionTemplate — which session comes next
+  isComplete: boolean;
+}
+
+// Shared by every screen that shows plan progress (Plan.tsx, Progress.tsx),
+// so "week X of Y" / "session N of M" can't drift between them. Driven by
+// actual completed sessions tagged with this plan, not wall-clock time —
+// starting a plan and never training it stays at 0%.
+export function computePlanProgress(plan: TrainingPlan, workouts: Workout[]): PlanProgress {
+  const totalSessions = plan.weeks * plan.sessionsPerWeek;
+  const completedSessions = Math.min(
+    totalSessions,
+    workouts.filter((w) => w.planId === plan.id && w.completed).length
+  );
+  const week = Math.min(plan.weeks, Math.floor(completedSessions / plan.sessionsPerWeek) + 1);
+  const pct = totalSessions === 0 ? 0 : (completedSessions / totalSessions) * 100;
+  const nextIndex = completedSessions % plan.sessionsPerWeek;
+  return { week, totalSessions, completedSessions, pct, nextIndex, isComplete: completedSessions >= totalSessions };
 }
 
 export const PLANS: TrainingPlan[] = [

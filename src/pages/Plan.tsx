@@ -3,7 +3,7 @@ import { CalendarDays, ChevronDown } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { uid } from '../lib/storage';
 import { localISO } from '../lib/schedule';
-import { PLANS } from '../lib/plans';
+import { PLANS, computePlanProgress } from '../lib/plans';
 import { WORKOUT_LIBRARY } from '../lib/library';
 import { Badge, Button, Card, EmptyState } from '../components/ds';
 
@@ -75,16 +75,9 @@ export default function Plan() {
   // can't be called after an early return.
   const progress = useMemo(() => {
     if (!activePlan) return null;
-    const totalSessions = activePlan.weeks * activePlan.sessionsPerWeek;
-    const completedSessions = Math.min(
-      totalSessions,
-      userWorkouts.filter((w) => w.planId === activePlan.id && w.completed).length
-    );
-    const week = Math.min(activePlan.weeks, Math.floor(completedSessions / activePlan.sessionsPerWeek) + 1);
-    const pct = totalSessions === 0 ? 0 : (completedSessions / totalSessions) * 100;
-    const nextIndex = completedSessions % activePlan.sessionsPerWeek;
-    const nextUp = WORKOUT_LIBRARY.find((l) => l.id === activePlan.sessionTemplate[nextIndex]) ?? null;
-    return { week, totalSessions, completedSessions, pct, nextIndex, nextUp, isComplete: completedSessions >= totalSessions };
+    const base = computePlanProgress(activePlan, userWorkouts);
+    const nextUp = WORKOUT_LIBRARY.find((l) => l.id === activePlan.sessionTemplate[base.nextIndex]) ?? null;
+    return { ...base, nextUp };
   }, [activePlan, userWorkouts]);
 
   const [activeExpanded, setActiveExpanded] = useState(false);

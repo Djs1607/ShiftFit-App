@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Dumbbell } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { buildDayPlans, dateKey, parseDateKey, pad2 } from '../lib/schedule';
+import { PLANS, computePlanProgress } from '../lib/plans';
+import { WORKOUT_LIBRARY } from '../lib/library';
 import { IntensityDot } from '../components/Fatigue';
-import { Card, IconButton, MetricTile, SegmentedControl, SparkBars } from '../components/ds';
+import { Badge, Card, IconButton, MetricTile, SegmentedControl, SparkBars } from '../components/ds';
 
 type Range = '1W' | '1M' | '6M' | '1Y' | 'All';
 const RANGES: Range[] = ['1W', '1M', '6M', '1Y', 'All'];
@@ -22,7 +24,7 @@ function fmtVolume(kg: number): string {
 }
 
 export default function Progress() {
-  const { userWorkouts, activePattern, userSleepLogs, userOverrides } = useStore();
+  const { userWorkouts, activePattern, userSleepLogs, userOverrides, userActivePlan } = useStore();
   const [range, setRange] = useState<Range>('All');
   const now = new Date();
   const [calYear, setCalYear] = useState(now.getFullYear());
@@ -33,6 +35,16 @@ export default function Progress() {
     () => userWorkouts.filter((w) => w.completed).sort((a, b) => b.datetime.localeCompare(a.datetime)),
     [userWorkouts]
   );
+
+  // active training plan's progress — same shared math Plan.tsx uses, so the
+  // two screens can't disagree on week/session counts
+  const activePlan = userActivePlan ? PLANS.find((p) => p.id === userActivePlan.planId) ?? null : null;
+  const planProgress = useMemo(() => {
+    if (!activePlan) return null;
+    const base = computePlanProgress(activePlan, userWorkouts);
+    const nextUp = WORKOUT_LIBRARY.find((l) => l.id === activePlan.sessionTemplate[base.nextIndex]) ?? null;
+    return { ...base, nextUp };
+  }, [activePlan, userWorkouts]);
 
   const stats = useMemo(() => {
     const cutoff = now.getTime() - RANGE_DAYS[range] * 86400000;
@@ -109,6 +121,45 @@ export default function Progress() {
   return (
     <div className="space-y-5">
       <h1 className="font-display text-[26px] font-semibold leading-tight tracking-[-0.02em] text-fg-primary">Progress</h1>
+
+      {/* active training plan — mirrors Plan.tsx's summary card, read-only here */}
+      {activePlan && planProgress && (
+        <Card tone="default" padding="lg" className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control border border-line-subtle bg-surface-inset">
+                <activePlan.icon size={18} strokeWidth={2} className="text-fg-secondary" />
+              </span>
+              <div className="min-w-0">
+                <p className="font-display text-[15px] font-semibold text-fg-primary truncate">{activePlan.name}</p>
+                <p className="text-[13px] text-fg-tertiary">Week {planProgress.week} of {activePlan.weeks}</p>
+              </div>
+            </div>
+            <Badge tone="neutral">{planProgress.isComplete ? 'Complete' : 'Active'}</Badge>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[12px] font-semibold uppercase tracking-[0.06em] text-fg-tertiary">Sessions</span>
+              <span className="font-mono text-[13px] font-medium text-fg-secondary">
+                {planProgress.completedSessions} of {planProgress.totalSessions}
+              </span>
+            </div>
+            <div className="overflow-hidden rounded-pill bg-data-track" style={{ height: 8 }}>
+              <div
+                className="h-full rounded-pill bg-fg-tertiary transition-[width] duration-slow ease-mechanical"
+                style={{ width: `${planProgress.pct}%` }}
+              />
+            </div>
+          </div>
+
+          {!planProgress.isComplete && planProgress.nextUp && (
+            <p className="text-[13px] text-fg-secondary">
+              Next up: <span className="text-fg-primary font-medium">{planProgress.nextUp.name}</span>
+            </p>
+          )}
+        </Card>
+      )}
 
       {/* stats card */}
       <Card tone="default" padding="lg">
