@@ -1,11 +1,68 @@
-import { useMemo } from 'react';
-import { CalendarDays } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { CalendarDays, ChevronDown } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { uid } from '../lib/storage';
 import { localISO } from '../lib/schedule';
 import { PLANS } from '../lib/plans';
 import { WORKOUT_LIBRARY } from '../lib/library';
 import { Badge, Button, Card, EmptyState } from '../components/ds';
+
+// Read-only breakdown of a plan's weekly rotation — the same sessionTemplate
+// repeats every week, so this always lists exactly `sessionsPerWeek` entries,
+// never weeks × sessionsPerWeek. `nextIndex` (only passed for the active
+// plan) marks which entry is coming up next, without repeating the "Next up
+// on Today" text that already says so elsewhere on this page.
+function SessionList({ template, sessionsPerWeek, nextIndex }: {
+  template: string[]; sessionsPerWeek: number; nextIndex?: number;
+}) {
+  return (
+    <ol className="space-y-1.5">
+      {template.slice(0, sessionsPerWeek).map((libId, i) => {
+        const lib = WORKOUT_LIBRARY.find((l) => l.id === libId);
+        const isNext = i === nextIndex;
+        return (
+          <li
+            key={i}
+            className={`flex items-center gap-3 rounded-control border px-3 py-2 ${
+              isNext ? 'border-[rgba(226,96,63,.35)] bg-action-accent-quiet' : 'border-line-subtle bg-surface-inset'
+            }`}
+          >
+            <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-[11px] font-semibold ${
+              isNext ? 'bg-action-accent text-fg-onAccent' : 'bg-surface-raised text-fg-tertiary'
+            }`}>
+              {i + 1}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[14px] font-medium text-fg-primary">{lib?.name ?? libId}</p>
+              {lib && (
+                <p className="text-[12px] text-fg-tertiary">
+                  {lib.durationMin} min · <span className="capitalize">{lib.intensity}</span>
+                </p>
+              )}
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+// Tap to reveal a plan's session list; collapsed by default. No existing
+// expand/collapse pattern elsewhere in the app to reuse for this shape
+// (a toggle within a card, not a page-level section), so this mirrors the
+// nearest local convention (Today.tsx's chevron-rotate toggle button).
+function SessionsToggle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      aria-expanded={open}
+      className="flex w-full items-center justify-between text-[13px] font-semibold text-fg-secondary hover:text-fg-primary"
+    >
+      Session breakdown
+      <ChevronDown className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+    </button>
+  );
+}
 
 export default function Plan() {
   const { user, userWorkouts, userActivePlan, dispatch } = useStore();
@@ -25,10 +82,13 @@ export default function Plan() {
     );
     const week = Math.min(activePlan.weeks, Math.floor(completedSessions / activePlan.sessionsPerWeek) + 1);
     const pct = totalSessions === 0 ? 0 : (completedSessions / totalSessions) * 100;
-    const nextLibId = activePlan.sessionTemplate[completedSessions % activePlan.sessionsPerWeek];
-    const nextUp = WORKOUT_LIBRARY.find((l) => l.id === nextLibId) ?? null;
-    return { week, totalSessions, completedSessions, pct, nextUp, isComplete: completedSessions >= totalSessions };
+    const nextIndex = completedSessions % activePlan.sessionsPerWeek;
+    const nextUp = WORKOUT_LIBRARY.find((l) => l.id === activePlan.sessionTemplate[nextIndex]) ?? null;
+    return { week, totalSessions, completedSessions, pct, nextIndex, nextUp, isComplete: completedSessions >= totalSessions };
   }, [activePlan, userWorkouts]);
+
+  const [activeExpanded, setActiveExpanded] = useState(false);
+  const [expandedCatalogId, setExpandedCatalogId] = useState<string | null>(null);
 
   if (!user) return null;
 
@@ -76,6 +136,17 @@ export default function Plan() {
             </p>
           )}
 
+          <div className="space-y-2">
+            <SessionsToggle open={activeExpanded} onToggle={() => setActiveExpanded((v) => !v)} />
+            {activeExpanded && (
+              <SessionList
+                template={activePlan.sessionTemplate}
+                sessionsPerWeek={activePlan.sessionsPerWeek}
+                nextIndex={progress.isComplete ? undefined : progress.nextIndex}
+              />
+            )}
+          </div>
+
           <Button variant="ghost" fullWidth onClick={() => dispatch({ type: 'cancelPlan', userId: user.id })}>
             Cancel plan
           </Button>
@@ -120,6 +191,17 @@ export default function Plan() {
                   </div>
                 </div>
                 <p className="text-[14px] leading-relaxed text-fg-secondary">{plan.description}</p>
+
+                <div className="space-y-2">
+                  <SessionsToggle
+                    open={expandedCatalogId === plan.id}
+                    onToggle={() => setExpandedCatalogId((v) => (v === plan.id ? null : plan.id))}
+                  />
+                  {expandedCatalogId === plan.id && (
+                    <SessionList template={plan.sessionTemplate} sessionsPerWeek={plan.sessionsPerWeek} />
+                  )}
+                </div>
+
                 <Button variant="accent" fullWidth disabled={isActive} onClick={() => startPlan(plan.id)}>
                   {isActive ? 'Current plan' : 'Start plan'}
                 </Button>
