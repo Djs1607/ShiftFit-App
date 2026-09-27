@@ -1,9 +1,9 @@
 import { useMemo, useState, type CSSProperties } from 'react';
-import { Moon, Sun, ChevronRight, Play, BedDouble, Check, Pencil } from 'lucide-react';
+import { Moon, Sun, ChevronRight, Play, BedDouble, Check, Pencil, AlertTriangle } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { uid } from '../lib/storage';
 import { buildDayPlans, fmtTime, dateKey, localISO } from '../lib/schedule';
-import { WORKOUT_LIBRARY } from '../lib/library';
+import { WORKOUT_LIBRARY, type LibraryWorkout } from '../lib/library';
 import { PLANS } from '../lib/plans';
 import TimePicker from '../components/TimePicker';
 import LoadMotif from '../components/LoadMotif';
@@ -115,6 +115,15 @@ export default function Today({ go, onStart }: { go: (t: Tab) => void; onStart: 
   let suggested = defaultSuggestion;
   let planId: string | undefined;
   let planNote: string | null = null;
+  // set only when the plan's next session is too hard for today's fatigue
+  // budget — surfaced as an explicit choice below instead of a silent swap.
+  let planMismatch: {
+    lib: LibraryWorkout;
+    planId: string;
+    week: number;
+    sessionIndex: number;
+    sessionsPerWeek: number;
+  } | null = null;
   if (activeTrainingPlan) {
     const completedCount = userWorkouts.filter((w) => w.planId === activeTrainingPlan.id && w.completed).length;
     const totalSessions = activeTrainingPlan.weeks * activeTrainingPlan.sessionsPerWeek;
@@ -126,11 +135,11 @@ export default function Today({ go, onStart }: { go: (t: Tab) => void; onStart: 
         const fitsToday = LEVEL_ORDER.indexOf(planLib.level) <= LEVEL_ORDER.indexOf(today.recommendation);
         // suggested/planId always reflect the plan's own pick — used when
         // there's nothing else scheduled today, and by startSuggested() below.
-        // planNote is cosmetic text, though, and a pre-existing nextWorkout
-        // wins the display regardless (see `w`/`lib` further down) — so only
-        // attribute it to this plan when nextWorkout doesn't exist, or exists
-        // and was itself created by this same plan. Otherwise it's just a
-        // false claim glued onto an unrelated workout.
+        // planNote/planMismatch are cosmetic, though, and a pre-existing
+        // nextWorkout wins the display regardless (see `w`/`lib` further
+        // down) — so only attribute either to this plan when nextWorkout
+        // doesn't exist, or exists and was itself created by this same plan.
+        // Otherwise it's just a false claim glued onto an unrelated workout.
         const canAttribute = !nextWorkout || nextWorkout.planId === activeTrainingPlan.id;
         if (fitsToday) {
           suggested = planLib;
@@ -139,7 +148,7 @@ export default function Today({ go, onStart }: { go: (t: Tab) => void; onStart: 
             planNote = `${activeTrainingPlan.name} · Week ${week}, session ${sessionIndex + 1} of ${activeTrainingPlan.sessionsPerWeek}`;
           }
         } else if (canAttribute) {
-          planNote = `${activeTrainingPlan.name} · swapped for today's lower fatigue budget`;
+          planMismatch = { lib: planLib, planId: activeTrainingPlan.id, week, sessionIndex, sessionsPerWeek: activeTrainingPlan.sessionsPerWeek };
         }
       }
     }
@@ -161,6 +170,28 @@ export default function Today({ go, onStart }: { go: (t: Tab) => void; onStart: 
       libraryId: suggested.id,
       planId,
       notes: suggested.name,
+    };
+    dispatch({ type: 'saveWorkout', workout: w });
+    onStart(w.id);
+  };
+
+  // the plan's originally-intended session, started knowingly despite the
+  // fatigue mismatch — unlike startSuggested(), this one tags planId so it
+  // counts toward the plan's progress.
+  const startPlanAnyway = () => {
+    if (!planMismatch) return;
+    const lib = planMismatch.lib;
+    const w: Workout = {
+      id: uid(),
+      userId: user.id,
+      datetime: localISO(new Date()),
+      type: lib.type,
+      durationMin: lib.durationMin,
+      intensity: lib.intensity,
+      completed: false,
+      libraryId: lib.id,
+      planId: planMismatch.planId,
+      notes: lib.name,
     };
     dispatch({ type: 'saveWorkout', workout: w });
     onStart(w.id);
@@ -313,6 +344,24 @@ export default function Today({ go, onStart }: { go: (t: Tab) => void; onStart: 
               <Check className="h-4 w-4 shrink-0" strokeWidth={3} />
               You're set for today
             </p>
+          ) : planMismatch && !w ? (
+            <div className="mt-5 space-y-3">
+              <div className="rounded-control border border-[rgba(226,96,63,.3)] bg-feedback-warning-quiet p-3.5">
+                <p className="flex items-start gap-2 text-[14px] font-semibold text-amber-400">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  Plan says: {planMismatch.lib.name}
+                </p>
+                <p className="mt-1.5 text-[13px] text-fg-secondary">
+                  Today scores as a {level} day, so that's more than your fatigue budget allows.
+                </p>
+              </div>
+              <Button variant="accent" size="lg" fullWidth icon={Play} onClick={startSuggested}>
+                Do {defaultSuggestion.name} instead
+              </Button>
+              <Button variant="secondary" size="lg" fullWidth onClick={startPlanAnyway}>
+                Do {planMismatch.lib.name} anyway
+              </Button>
+            </div>
           ) : (
             <Button
               variant={isRest ? 'secondary' : 'accent'}
