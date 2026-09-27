@@ -11,35 +11,70 @@ import { Badge, Button, Card, EmptyState } from '../components/ds';
 // repeats every week, so this always lists exactly `sessionsPerWeek` entries,
 // never weeks × sessionsPerWeek. `nextIndex` (only passed for the active
 // plan) marks which entry is coming up next, without repeating the "Next up
-// on Today" text that already says so elsewhere on this page.
+// on Today" text that already says so elsewhere on this page. Each row is
+// itself tappable to reveal its exercises (sets × reps), reusing the exact
+// numbered-list style WorkoutDetail.tsx already uses for "The session" —
+// this stays read-only too, no navigation or start action.
 function SessionList({ template, sessionsPerWeek, nextIndex }: {
   template: string[]; sessionsPerWeek: number; nextIndex?: number;
 }) {
+  const [openRows, setOpenRows] = useState<Set<number>>(new Set());
+  const toggleRow = (i: number) => setOpenRows((prev) => {
+    const next = new Set(prev);
+    if (next.has(i)) next.delete(i); else next.add(i);
+    return next;
+  });
+
   return (
     <ol className="space-y-1.5">
       {template.slice(0, sessionsPerWeek).map((libId, i) => {
         const lib = WORKOUT_LIBRARY.find((l) => l.id === libId);
         const isNext = i === nextIndex;
+        const rowOpen = openRows.has(i);
+        const exercises = lib?.plan ?? [];
         return (
           <li
             key={i}
-            className={`flex items-center gap-3 rounded-control border px-3 py-2 ${
+            className={`overflow-hidden rounded-control border ${
               isNext ? 'border-[rgba(226,96,63,.35)] bg-action-accent-quiet' : 'border-line-subtle bg-surface-inset'
             }`}
           >
-            <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-[11px] font-semibold ${
-              isNext ? 'bg-action-accent text-fg-onAccent' : 'bg-surface-raised text-fg-tertiary'
-            }`}>
-              {i + 1}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[14px] font-medium text-fg-primary">{lib?.name ?? libId}</p>
-              {lib && (
-                <p className="text-[12px] text-fg-tertiary">
-                  {lib.durationMin} min · <span className="capitalize">{lib.intensity}</span>
+            <button onClick={() => toggleRow(i)} aria-expanded={rowOpen} className="flex w-full items-center gap-3 px-3 py-2 text-left">
+              <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-[11px] font-semibold ${
+                isNext ? 'bg-action-accent text-fg-onAccent' : 'bg-surface-raised text-fg-tertiary'
+              }`}>
+                {i + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[14px] font-medium text-fg-primary">{lib?.name ?? libId}</p>
+                {lib && (
+                  <p className="text-[12px] text-fg-tertiary">
+                    {lib.durationMin} min · <span className="capitalize">{lib.intensity}</span>
+                  </p>
+                )}
+              </div>
+              <ChevronDown className={`h-4 w-4 shrink-0 text-fg-disabled transition-transform ${rowOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {rowOpen && (
+              exercises.length > 0 ? (
+                <ul className="border-t border-line-subtle">
+                  {exercises.map((p, ei) => (
+                    <li key={ei} className={`flex items-center gap-3 px-3 py-2 ${ei > 0 ? 'border-t border-line-subtle' : ''}`}>
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-control bg-surface-card font-mono text-[11px] font-semibold text-fg-tertiary">
+                        {ei + 1}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-fg-primary">{p.name}</span>
+                      <span className="shrink-0 font-mono text-[12px] font-medium text-fg-secondary">{p.sets} × {p.reps}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="border-t border-line-subtle px-3 py-2 text-[12px] text-fg-tertiary">
+                  No exercise breakdown — a single continuous effort.
                 </p>
-              )}
-            </div>
+              )
+            )}
           </li>
         );
       })}
