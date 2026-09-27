@@ -10,12 +10,12 @@ import { Badge, Button, Card, EmptyState } from '../components/ds';
 export default function Plan() {
   const { user, userWorkouts, userActivePlan, dispatch } = useStore();
 
-  if (!user) return null;
-
   const activePlan = userActivePlan ? PLANS.find((p) => p.id === userActivePlan.planId) ?? null : null;
 
   // Progress is driven by actual completed sessions tagged with this plan,
   // not by wall-clock time — starting a plan and never training it stays at 0%.
+  // Computed unconditionally (before the `!user` guard below) since hooks
+  // can't be called after an early return.
   const progress = useMemo(() => {
     if (!activePlan) return null;
     const totalSessions = activePlan.weeks * activePlan.sessionsPerWeek;
@@ -29,6 +29,8 @@ export default function Plan() {
     const nextUp = WORKOUT_LIBRARY.find((l) => l.id === nextLibId) ?? null;
     return { week, totalSessions, completedSessions, pct, nextUp, isComplete: completedSessions >= totalSessions };
   }, [activePlan, userWorkouts]);
+
+  if (!user) return null;
 
   function startPlan(planId: string) {
     dispatch({ type: 'startPlan', record: { id: uid(), userId: user!.id, planId, startedAt: localISO(new Date()) } });
@@ -73,6 +75,10 @@ export default function Plan() {
               Next up on Today: <span className="text-fg-primary font-medium">{progress.nextUp.name}</span>
             </p>
           )}
+
+          <Button variant="ghost" fullWidth onClick={() => dispatch({ type: 'cancelPlan', userId: user.id })}>
+            Cancel plan
+          </Button>
         </Card>
       ) : (
         <EmptyState
