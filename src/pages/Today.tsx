@@ -124,11 +124,21 @@ export default function Today({ go, onStart }: { go: (t: Tab) => void; onStart: 
       const planLib = WORKOUT_LIBRARY.find((l) => l.id === activeTrainingPlan.sessionTemplate[sessionIndex]);
       if (planLib) {
         const fitsToday = LEVEL_ORDER.indexOf(planLib.level) <= LEVEL_ORDER.indexOf(today.recommendation);
+        // suggested/planId always reflect the plan's own pick — used when
+        // there's nothing else scheduled today, and by startSuggested() below.
+        // planNote is cosmetic text, though, and a pre-existing nextWorkout
+        // wins the display regardless (see `w`/`lib` further down) — so only
+        // attribute it to this plan when nextWorkout doesn't exist, or exists
+        // and was itself created by this same plan. Otherwise it's just a
+        // false claim glued onto an unrelated workout.
+        const canAttribute = !nextWorkout || nextWorkout.planId === activeTrainingPlan.id;
         if (fitsToday) {
           suggested = planLib;
           planId = activeTrainingPlan.id;
-          planNote = `${activeTrainingPlan.name} · Week ${week}, session ${sessionIndex + 1} of ${activeTrainingPlan.sessionsPerWeek}`;
-        } else {
+          if (canAttribute) {
+            planNote = `${activeTrainingPlan.name} · Week ${week}, session ${sessionIndex + 1} of ${activeTrainingPlan.sessionsPerWeek}`;
+          }
+        } else if (canAttribute) {
           planNote = `${activeTrainingPlan.name} · swapped for today's lower fatigue budget`;
         }
       }
